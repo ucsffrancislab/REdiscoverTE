@@ -1,0 +1,22 @@
+{
+    "read_files": "( RSEM_SIMULATED_LAML_SAMPLE/input_R1.fq.gz, RSEM_SIMULATED_LAML_SAMPLE/input_R2.fq.gz )",
+    "expected_format": "IU",
+    "compatible_fragment_ratio": 0.9924644674470842,
+    "num_compatible_fragments": 780745,
+    "num_assigned_fragments": 786673,
+    "num_consistent_mappings": 955314,
+    "num_inconsistent_mappings": 317445,
+    "strand_mapping_bias": 0.5006898255442713,
+    "MSF": 0,
+    "OSF": 18317,
+    "ISF": 476998,
+    "MSR": 0,
+    "OSR": 18403,
+    "ISR": 478316,
+    "SF": 138525,
+    "SR": 138533,
+    "MU": 0,
+    "OU": 0,
+    "IU": 0,
+    "U": 0
+}

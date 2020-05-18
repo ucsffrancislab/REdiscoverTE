@@ -1,0 +1,2 @@
+sample	quant_sf_path
+SalmonFile1	Step_2_salmon_counts/quant.sf
