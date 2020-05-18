@@ -90,7 +90,7 @@ gzip original/REdiscoverTE/EXPECTED_OUTPUT_FILES/Step_2_salmon_counts/quant.sf
 
 mkdir -p original/REdiscoverTE/rollup_annotation/REdiscoverTE_whole_transcriptome_hg38-20
 faSplit sequence original/REdiscoverTE/rollup_annotation/REdiscoverTE_whole_transcriptome_hg38.fa 20 original/REdiscoverTE/rollup_annotation/REdiscoverTE_whole_transcriptome_hg38-20/
-gzip original/REdiscoverTE/rollup_annotation/REdiscoverTE_whole_transcriptome_hg38-20/?.fa
+gzip original/REdiscoverTE/rollup_annotation/REdiscoverTE_whole_transcriptome_hg38-20/*.fa
 ```
 
 
