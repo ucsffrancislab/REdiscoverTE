@@ -1,0 +1,344 @@
+---
+title: "REdiscoverTE Paper: Figure 4"
+author: "Yu Kong, Haiyin Chen-Harris"
+date: 'September 3, 2019'
+output:
+  html_document:
+    toc: yes
+    toc_depth: 3
+    theme: cosmo
+    code_folding: hide
+  pdf_document:
+    toc: yes
+    toc_depth: 3
+  word_document: default
+---
+
+```{r options, echo=FALSE, warning=FALSE, message = FALSE}
+library(RColorBrewer)
+library(grid)
+library(gridExtra) # grid.arrange
+library(rmarkdown)
+library(knitr)
+library(ComplexHeatmap) # for 'draw'
+library(circlize) # for 'colorRamp2'
+library(Biobase)
+library(ggplot2)
+library(dplyr)
+options(stringsAsFactors=F, replace.assign=TRUE, width=90, scipen=1, digits=3)
+opts_chunk$set(dpi=300, dev=c("png","pdf"), fig.path=paste0("./OUTPUT_FIGURES--Fig4/"), fig.width=7, fig.height=7, fig.align='center', 
+         fig.pos='htbp', echo=FALSE, cache=F, message=FALSE, warning=FALSE)
+col.pal <- rev(RColorBrewer::brewer.pal(9,"Spectral"))
+repclass_col = c("SINE"="#984EA3","DNA"="#FFFF33","LINE"="#377EB8","LTR"="#4DAF4A","Retroposon"="#FF7F00")
+```
+
+## Figure 4A
+```{r Figure_4A, fig.width=9, fig.height=8}
+geneset_short = c("Type I IFN response","Type II IFN response","APM",
+                  "HR","DNA damage repair","Cell cycle","EMT","P53 Signaling","Pan-F-TBRS")
+
+model_col = c("Cellularity Model"="#D33533", "Full Lasso Model"="#377EB8", "Top TE Linear Model" = "#487DB5") # model colors
+
+R2_lasso_df <- readRDS(file.path(system.file(package="REdiscoverTEpaper"), "Fig4_data", "geneset_score", "Lasso.4.models.R2.results.RDS")) # Updated dataset Jan 22, 2018. Names are slightly diffeerent from the n the "R2_df" data structure below.
+
+levels(R2_lasso_df$gene_signature)[levels(R2_lasso_df$gene_signature) == "P53 signaling"] = "P53 Signaling" # standardize the capitalization! Make it match the "R2_df" (seen below).
+levels(R2_lasso_df$gene_signature)[levels(R2_lasso_df$gene_signature) == "Pan F TBRS"] = "Pan-F-TBRS"
+
+desired_plot_order.vec = c("Type I IFN response", "Type II IFN response", "CD8 Teffector", "Immune checkpoint", "APM", "NFkB response", "TNFa response", "IL1b response", "HR", "NHEJ", "Mismatch repair", "NER", "DNA damage repair", "Fanconi anemia", "DNA replication", "DNA Rep depen Hist", "Cell cycle", "Cell cycle regulators", "WNT_target", "Angiogenesis", "EMT", "P53 Signaling", "FGFR3 related genees", "Pan-F-TBRS")
+R2_lasso_df$gene_signature = factor(R2_lasso_df$gene_signature, levels=desired_plot_order.vec) # reorder the factor levels to match the desired order in the output figure.
+
+stopifnot(all(geneset_short %in% levels(R2_lasso_df$gene_signature)))
+
+R2_lasso_updated_df =  R2_lasso_df %>% dplyr::rename("gene_signatures"="gene_signature", "model"="Model", "r2"="R2") %>% filter(model != "cellularity.simple")
+
+C_MODEL_TEXT    = "Cellularity Model"
+PERMUTE_TEXT    = "Cellularity + Permuted TE"
+TRUE_MODEL_TEXT = "Cellularity + true TE data"
+stopifnot(identical(levels(R2_lasso_updated_df$model), c("cellularity", "cellularity+permuted TE data",  "cellularity+true TE data", "cellularity.simple"))) # we ASSUME these will come in this order!
+levels(R2_lasso_updated_df$model) <- c(C_MODEL_TEXT, PERMUTE_TEXT, TRUE_MODEL_TEXT, "CELLULARITY_SIMPLE_UNUSED")
+R2_lasso_colors = c("Cellularity Model"="#D33533", "Cellularity + Permuted TE"="#44cc44", "Cellularity + true TE data" = "#487DB5") %>% `names<-`(c(C_MODEL_TEXT, PERMUTE_TEXT, TRUE_MODEL_TEXT))
+ 
+R2_lasso_short_df = R2_lasso_updated_df %>% filter(gene_signatures %in% geneset_short)
+
+p3 = ggplot(R2_lasso_short_df ,aes(x=model,y=r2,fill=model)) + geom_boxplot(outlier.alpha = 0) +
+ geom_point(aes(x=model,y=r2),position=position_jitter(width = 0.2),alpha=0.7,size=1.5) +
+ facet_wrap(~gene_signatures,nrow=3) +
+ theme_bw() + scale_fill_manual(values=R2_lasso_colors[1:3]) +
+ labs(x="Statistical Model",y=bquote(R^2),title=bquote(R^2~"from Regression Models")) +
+ theme(legend.position = "none",
+  strip.text = element_text(size=16,colour="black"),
+  axis.title=element_text(size=16),
+  axis.text=element_text(size=11,colour = "black"),
+  axis.text.x=element_text(size=10,angle=90,vjust=0.5,hjust=1.0, color="black"),
+  panel.grid.major = element_blank(),
+  panel.grid.minor = element_blank(),
+  plot.title =element_text(size=16,colour="black",face="bold"),
+  legend.text = element_text(size=14),
+  legend.title = element_text(size=14))
+  
+p3
+```
+
+## Figure S4C
+
+```{r Figure_S4C,fig.width=10,fig.height=14}
+s4c = ggplot(R2_lasso_updated_df,aes(x=model,y=r2,fill=model)) + geom_boxplot(outlier.alpha = 0) +
+ geom_point(aes(x=model,y=r2),position=position_jitter(width = 0.2),alpha=0.7,size=1.5) +
+ facet_wrap(~gene_signatures, ncol=4) +
+ theme_bw() + scale_fill_manual(values=R2_lasso_colors[1:3]) +
+ labs(x="Statistical Model",y=bquote(R^2),title=bquote(R^2~"from Regression Models")) +
+ theme(legend.position = "none",
+  strip.text = element_text(size=16,colour="black"),
+  axis.title=element_text(size=16),
+  axis.text=element_text(size=11,colour = "black"),
+  axis.text.x=element_text(size=10,angle=90,vjust=0.5,hjust=1.0, color="black"),
+  panel.grid.major = element_blank(),
+  panel.grid.minor = element_blank(),
+  plot.title =element_text(size=16,colour="black",face="bold"),
+  legend.text = element_text(size=14),
+  legend.title = element_text(size=14))
+
+print(s4c) # 24 gene sets
+
+# 
+# g = ggplot(R2_df,aes(x=model,y=r2,fill=model)) + geom_boxplot(outlier.alpha = 0) 
+# g = g + geom_point(data=R2_df,aes(x=model,y=r2),position=position_jitter(width = 0.2),alpha=0.7,size=1.5)
+# g = g + facet_wrap(~gene_signatures,nrow=5) + theme_bw() + scale_fill_manual(values=model_col)
+# g = g + labs(x="Statistical Model",y=bquote(R^2),title=bquote(R^2~"from Regression Models"))
+# g = g + theme(legend.position = "none",
+#               strip.text = element_text(size=16,colour="black"),
+#               axis.title=element_text(size=16),
+#               axis.text=element_text(size=16,colour = "black"),
+#               axis.text.x=element_text(size=16,angle=90,vjust=0.5,hjust=0.5,colour = "black"),
+#               panel.grid.major = element_blank(),
+#               panel.grid.minor = element_blank(),
+#               plot.title =element_text(size=16,colour="black",face="bold"),
+#               legend.text = element_text(size=14),
+#               legend.title = element_text(size=14))
+# g
+```
+
+## Figure 4B
+```{r plot function scatter}
+plot_geneset_cor = function(geneset,repName,indic){
+  tmp_score = get(paste0(indic,"_score")) # get geneset score (by **variable name**)
+  if (!(geneset %in% rownames(tmp_score))) { stop(paste0("Error! Looks like the geneset ", geneset, " could not be found in 'tmp_score' (variable name: ", paste0(indic,"_score"), ")")) }
+  
+  tmp_cpm = TE_cpm[,colnames(tmp_score)] # get repName cpm
+  tmp_cpm_expr = exprs(tmp_cpm)
+  tmp_sample = pData(tmp_cpm)
+  tmp_cor = get(paste0(indic,"_cor"))  # get cor val  **by variable name**
+  
+  if (!(repName %in% colnames(tmp_cor))) { stop(paste0("Error! Looks like the repName ", repName, " could not be found in 'tmp_cor' (variable name: ", paste0(indic,"_cor"), ")")) }
+
+  cor_val = signif(tmp_cor[geneset,repName],2)
+  # generate dataframe
+  if(all.equal(colnames(tmp_score),colnames(tmp_cpm_expr))==T&all.equal(rownames(tmp_sample),colnames(tmp_score))==T){
+    tmp_data = data.frame(geneset=tmp_score[geneset,],
+                        repName=tmp_cpm_expr[repName,],
+                        patientID = tmp_sample$patient_ID)
+  }
+  else {
+    stop("The sample is not consistent in geneset score and expression data")
+  }
+  cor_g = ggplot(tmp_data, aes(x=repName,y=geneset)) + geom_smooth(method="lm",se=F,colour="grey",size=1) 
+  cor_g = cor_g + geom_point(colour="#B2182B",size=3) + theme_classic()
+  cor_g = cor_g + labs(x=paste0(repName, " logCPM"),
+                       y=paste0(geneset ," Score")) + ggtitle(indic, paste0("cor=", cor_val))
+  cor_g = cor_g + theme(axis.title=element_text(size=20),
+                        axis.text=element_text(size=18,colour = "black"),
+                        title =element_text(size=20,colour="black"),
+                        legend.text = element_text(size=14),
+                        legend.title = element_text(size=14,face = "bold"))
+  cor_g
+}
+```
+
+```{r fig4b load data}
+## load exp
+TE_cpm <- readRDS(file.path(system.file(package="REdiscoverTEpaper"), "Fig4_data", "eset_TCGA_TE_intergenic_logCPM.RDS"))
+sample = pData(TE_cpm)
+indication = sort(unique(sample$indication))
+
+## load adjusted score
+for (indic in indication) {
+  tmp_score <- readRDS(file.path(system.file(package="REdiscoverTEpaper"), "Fig4_data", "geneset_score", "tumor_content_corrected_score", paste0(indic,"_tumor_content_corrected_geneset_score.RDS")))
+  assign(paste0(indic,"_score"),tmp_score)
+}
+
+## load correlation matrix
+for (indic in indication) {
+  tmp_cor <- readRDS(file.path(system.file(package="REdiscoverTEpaper"), "Fig4_data", "geneset_score", "correlation_geneset", paste0(indic,"_tumor_sample_spearman_intergenic_TE_vs_tumor_content_corrected_geneset_score_cor.RDS")))
+  assign(paste0(indic,"_cor"),tmp_cor)
+}
+```
+
+```{r Fig4B_Scatter, fig.width=12,fig.height=12}
+y_lab_size = 14
+a1=plot_geneset_cor(geneset="Type II IFN Response","LTR21B","HNSC") + theme(axis.title=element_text(size=y_lab_size))
+a2=plot_geneset_cor(geneset="Immune_checkpoint","LTR21B","KIRC") + theme(axis.title=element_text(size=y_lab_size))
+a3=plot_geneset_cor(geneset="Pan-F-TBRS","LTR38B","SARC") + theme(axis.title=element_text(size=y_lab_size))
+
+b1=plot_geneset_cor(geneset="DNA_replication","LTR48B","BLCA") + theme(axis.title=element_text(size=y_lab_size))
+b2=plot_geneset_cor(geneset="CD8_T_effector","MER57F","LUAD") + theme(axis.title=element_text(size=y_lab_size))
+b3=plot_geneset_cor(geneset="Type I IFN Response","LTR21B","HNSC") + theme(axis.title=element_text(size=y_lab_size))
+
+c1=plot_geneset_cor(geneset="DNA_damage_repair","MER75","SARC") + theme(axis.title=element_text(size=y_lab_size))
+c2=plot_geneset_cor(geneset="P53 response","LTR9C","THCA") + theme(axis.title=element_text(size=y_lab_size))
+c3=plot_geneset_cor(geneset="TNFalpha Response","HERVL74-int","COAD") + theme(axis.title=element_text(size=y_lab_size))
+
+gridExtra::grid.arrange(a1,a2,a3,  b1,b2,b3,  c1,c2,c3, nrow=3) # Plot a 3x3 grid of scatterplots.
+```
+
+## Figure 4C: Heatmap showing Positive Examples
+```{r generate df}
+# 1. Function to generate matrix
+generateMat = function(element) {
+  cor_mat = NULL
+  fdr_mat = NULL
+  
+  for (indic in indication){
+    tmp_cor_geneset = get(paste0(indic,"_cor"))
+    tmp_cor_geneset_element = tmp_cor_geneset[,element]
+    
+    tmp_cor_xcell = get(paste0(indic,"_xcell_cor"))
+    tmp_cor_xcell_element = tmp_cor_xcell[,element]
+    
+    tmp_cor_element = c(tmp_cor_geneset_element,tmp_cor_xcell_element)
+    
+    cor_mat = cbind(cor_mat,tmp_cor_element)
+    
+    ## get the fdr value
+    tmp_fdr_geneset = get(paste0(indic,"_fdr"))
+    tmp_fdr_geneset_element = tmp_fdr_geneset[,element]
+    
+    tmp_fdr_xcell = get(paste0(indic,"_xcell_fdr"))
+    tmp_fdr_xcell_element = tmp_fdr_xcell[,element]
+    
+    tmp_fdr_element = c(tmp_fdr_geneset_element,tmp_fdr_xcell_element)
+    
+    fdr_mat = cbind(fdr_mat,tmp_fdr_element)
+  }
+  name = c(rownames(BLCA_cor),rownames(BLCA_xcell_cor))
+  name = gsub("\\+","",name)
+  name = gsub(" ","_",name)
+  name = gsub("\\-","_",name)
+  rownames(cor_mat) = name
+  rownames(fdr_mat) = name
+  colnames(cor_mat) = indication
+  colnames(fdr_mat) = indication
+  res = list(cor = cor_mat, fdr = fdr_mat)
+  
+  res
+}
+
+getDE = function(repName,value="logFC"){
+  res = NULL
+  for (indic in indication){
+   file <- file.path(system.file(package="REdiscoverTEpaper"), "Fig4_data", "Fig4_DE_TopTables_Paired_Intergenic", paste0(indic,"_paired_topTable.RDS"))
+    #file <- file.path(system.file(package="REdiscoverTEpaper"), "Fig4_data", "DE_Analysis", "topTable", "TCGA", "paired", "intergenic", paste0(indic,"_paired_topTable.RDS"))
+    #file = paste0("../../DE_Analysis/topTable/TCGA/paired/intergenic/",indic,"_paired_topTable.RDS")
+    if(file.exists(file)){
+      tmp_topTable = readRDS(file)
+      tmp_RE = tmp_topTable[repName,]
+      res = cbind(res,tmp_RE[,value])
+    }
+    else res = cbind(res,rep(NA,length(repName)))
+  }
+  rownames(res) = repName
+  colnames(res) = indication
+  res
+}
+```
+
+```{r plot function,fig.width=12,fig.height=8}
+# 2. Function to plot Heatmap
+plotH = function(data,repName){
+  geneset_select = c("Type_I_IFN_Response","Type_II_IFN_Response","TNFalpha_Response","IL1beta_Response","NFkB_response",
+                   "Immune_checkpoint","Antigen_processing_machinery","Cell_cycle","Homologous_recombination","EMT","Pan_F_TBRS",
+                   "CD8_T_cells","CD4_T_cells","NKT","Tregs","B_cells","Macrophages","Neutrophils","Fibroblasts","HSC","pDC")
+  ## prepare cor matrix
+  cor_plot = data$cor[geneset_select,]
+  fdr_plot = data$fdr[geneset_select,]
+  star_plot = ifelse(fdr_plot<0.05&abs(cor_plot)>=0.5,"*","")
+  star_plot = ifelse(fdr_plot<0.01&abs(cor_plot)>=0.5,"**",star_plot)
+  star_plot = ifelse(fdr_plot<0.001&abs(cor_plot)>=0.5,"***",star_plot)
+  
+  ## prepare annotation
+  logFC = getDE(repName,value = "logFC")
+  FDR = getDE(repName,value = "adj.P.Val")
+  
+  top = data.frame(indication=colnames(logFC), DE_logFC = logFC[repName,], DE_FDR = FDR[repName,])
+  top = top[,-1]
+  top_annotation = HeatmapAnnotation(df=top,
+                                     name=c("DE_logFC","DE_FDR"),
+                                     col=list(DE_logFC=circlize::colorRamp2(c(-1,0,1,2,3),c("#4D9221","#F7F7F7","#DE77AE","#C51B7D","#8E0152")),
+                                              DE_FDR = circlize::colorRamp2(c(0,0.001,0.01,0.05,0.051),
+                                                                  c("#006837","#238443","#41AB5D","#78C679","#F7F7F7"))),
+                                           show_annotation_name = T)
+  
+  range = c(-1,0,1)
+  h=Heatmap(cor_plot,
+            col = circlize::colorRamp2(range, c("#08519C","#FFFFFF","#CB181D")),
+            row_title = "",
+            column_title = paste0("TCGA: ",repName," Intergenic Expression vs. Geneset"),
+            column_title_gp = gpar(fontsize = 16,fontface="bold"),
+            column_title_side = "top",
+            cluster_rows = F,
+            split=rep(c("Cytokine\nResponse","Gene\nSignatrues","xCell"),c(5,6,10)),
+            row_title_gp = gpar(fontsize = 16,fontface="bold"),
+            gap = unit(5,"mm"),
+            cluster_columns = F,
+            show_row_names = T,
+            column_names_side = "top",
+            column_names_gp = gpar(fontsize=14),
+            row_names_gp = gpar(fontsize=14),
+            cell_fun = function(j,i,x,y,width,height,fill){
+              grid.text(star_plot[i,j],x,y,gp=gpar(fontsize=12),just=c("center","center"),vjust=0.5)
+            },
+            rect_gp = gpar(col = "white", lwd = 2),
+            bottom_annotation = top_annotation,
+            #bottom_annotation_height = unit(8,"mm"),
+            name="cor",
+            heatmap_legend_param = list(color_bar="continuous",ncol=1))
+  
+  h
+}
+```
+
+```{r load data}
+## 2. load correlation matrix with geneset score ##
+for (indic in indication) {
+  tmp_mat <- readRDS(file.path(system.file(package="REdiscoverTEpaper"), "Fig4_data", "geneset_score", "correlation_geneset", paste0(indic,"_tumor_sample_spearman_intergenic_TE_vs_tumor_content_corrected_geneset_score_cor.RDS")))
+  # load p value and do the adjustment
+  tmp_adj_p <- readRDS(file.path(system.file(package="REdiscoverTEpaper"), "Fig4_data", "geneset_score", "correlation_geneset", paste0(indic,"_tumor_sample_spearman_intergenic_TE_vs_tumor_content_corrected_geneset_score_fdr.RDS")))
+  assign(x = paste0(indic,"_cor"),tmp_mat)
+  assign(x = paste0(indic,"_fdr"),tmp_adj_p)
+}
+
+## 3. load correlation matrix with xCell ##
+for (indic in indication){
+  tmp_mat <- readRDS(file.path(system.file(package="REdiscoverTEpaper"), "Fig4_data", "geneset_score", "correlation_xCell", paste0(indic,"_tumor_sample_spearman_intergenic_TE_vs_xCell_tumor_content_corrected_cor.RDS")))
+  # load p value and do the adjustment
+  tmp_p <- readRDS(file.path(system.file(package="REdiscoverTEpaper"), "Fig4_data", "geneset_score", "correlation_xCell", paste0(indic,"_tumor_sample_spearman_intergenic_TE_vs_xCell_tumor_content_corrected_p.RDS")))
+  tmp_adj_p = matrix(p.adjust(as.vector(tmp_p),method = "BH"),nrow=nrow(tmp_p),ncol=ncol(tmp_p))
+  rownames(tmp_adj_p) = rownames(tmp_p)
+  colnames(tmp_adj_p) = colnames(tmp_p)
+  assign(x = paste0(indic,"_xcell_cor"),tmp_mat)
+  assign(x = paste0(indic,"_xcell_fdr"),tmp_adj_p)
+}
+```
+
+### Figure 4C-1: `LTR21B`
+```{r Fig4C_1_LTR21B,fig.width=12,fig.height=9}
+LTR21B_res = generateMat("LTR21B")
+h1 = plotH(data=LTR21B_res,repName="LTR21B")
+ComplexHeatmap::draw(h1)
+```
+
+### Figure 4C-2: `MER57F`
+```{r Fig4C_2_MER57F,fig.width=12,fig.height=9}
+MER57F_res = generateMat("MER57F")
+plotH(data=MER57F_res,repName="MER57F")
+```
+

@@ -1,0 +1,228 @@
+---
+title: "REdiscoverTE Paper: Figure 2"
+author: "Yu Kong, Haiyin Chen-Harris"
+date: 'September 3, 2019'
+output:
+  html_document:
+    toc: yes
+    toc_depth: 3
+    theme: cosmo
+    code_folding: hide
+  pdf_document:
+    toc: yes
+    toc_depth: 3
+  word_document: default
+---
+
+```{r options, echo=FALSE, warning=FALSE, message = FALSE}
+library(ggplot2)
+library(RColorBrewer)
+library(rmarkdown)
+library(knitr)
+library(ComplexHeatmap) # <-- from Bioconductor
+library(circlize) # colorRamp2
+library(dplyr)
+options(stringsAsFactors=F)
+opts_chunk$set(dpi=300, dev=c("png","pdf"), fig.path=paste0("./OUTPUT_FIGURES--Fig2/"),
+ fig.width=7, fig.height=7, fig.align='center', 
+ fig.pos='htbp', echo=FALSE, cache=FALSE, message=FALSE, warning=FALSE)
+
+TE <- readRDS(file.path(system.file(package="REdiscoverTEpaper"), "Fig2_data", "TE_repNames.RDS"))
+classColor = c(RColorBrewer::brewer.pal(9,"Set1")[-1],brewer.pal(4,"Set3"))
+names(classColor) = c("LINE","LTR","SINE","SVA","Satellite","DNA",
+                      "Low_complexity","RNA","srpRNA","scRNA","RC","snRNA")
+TE_repClass = c("LINE","LTR","SINE","SVA","DNA")
+repclass_col = classColor[TE_repClass]
+```
+
+## Figure 2A:
+```{r fig2a, fig.height=3, fig.width=5}
+TCGA_total_topTable        <- readRDS(file.path(system.file(package="REdiscoverTEpaper"), "Fig2_data", "TCGA_intergenic_exp_merged_topTable_M_A.RDS"))
+repName_repFam_repClass_TE <- readRDS(file.path(system.file(package="REdiscoverTEpaper"), "Fig2_data", "repName_repClass_repFam_TE.RDS"))
+sig.tib = TCGA_total_topTable %>% filter(adj.P.Val <= 0.05, abs(logFC) >= 1.0) %>% select(repName, indication, logFC) %>% filter(repName %in% repName_repFam_repClass_TE$repName) %>% mutate(direction=ifelse(logFC>0, 
+ "Up", "Down")) %>% mutate(indication=factor(indication, levels=c("STAD","BLCA","LIHC","HNSC","PRAD","COAD","KIRC","LUSC","KIRP","LUAD","KICH","BRCA","THCA")))
+
+bar_signed.tib = sig.tib %>% group_by(indication, direction) %>% summarize(height=n()) %>% mutate(height=ifelse(direction=="Down", yes=(-height), no=(height)))
+
+# "Stacked" bars where negative D.E. expression is below the axis, and positive is above.
+bar3 = ggplot(bar_signed.tib, aes(x=indication, y=height, fill=direction)) +   geom_bar(position="identity", stat="identity", width=1, color="white") +
+ labs(y="No. TE subfamilies", x="TCGA Cancer Type", fill="Differential expression direction:") +
+ scale_fill_manual(values=c("Down"="#1F78B4","Up"="#D95F02")) +
+ ggtitle("No. Differentially Expressed TEs") +
+ theme_classic() + theme(legend.position = "bottom",
+  axis.title = element_text(size=12),
+  axis.text.x = element_text(size=10,angle=90,vjust=0.5,hjust=0.5),
+  axis.text.y = element_text(size=12),
+  plot.title = element_text(size=12,face="bold"),
+  legend.text = element_text(size=9),
+  legend.title = element_text(size=10))
+print(bar3)
+
+```
+
+## Figure 2B: M-A plot
+  * Cancer types ordered according to Figure 2A.
+```{r TCGA_MA_plot,fig.width=12,fig.height=8}
+TCGA_total_topTable_TE = TCGA_total_topTable[TCGA_total_topTable$repName%in%TE,]
+TCGA_total_topTable_TE$indication = factor(TCGA_total_topTable_TE$indication,
+                                           levels=c("STAD","BLCA","LIHC","HNSC","PRAD","COAD","KIRC","LUSC","KIRP","LUAD","KICH","BRCA","THCA"))
+MA_g = ggplot(TCGA_total_topTable_TE,aes(x=AveNormExpr,y=logFC,colour=sig)) + geom_point()
+MA_g = MA_g + facet_wrap(~indication,nrow=3) + theme_bw() + ylim(-5,5)
+MA_g = MA_g + scale_colour_manual(values = c("TRUE"="red","FALSE"="gray50"))
+MA_g = MA_g + labs(x="Average logCPM in Normal",y="log2 Fold Change",title="TCGA: M-A Plot (Intergenic Exp)")
+MA_g = MA_g + geom_hline(yintercept = 0,linetype=3)
+MA_g = MA_g + theme(legend.position = "none",
+              strip.text = element_text(size=18,colour="black"),
+              axis.title=element_text(size=18),
+              axis.text=element_text(size=14,colour = "black"),
+              panel.grid.major = element_blank(),
+              panel.grid.minor = element_blank(),
+              plot.title =element_text(size=18,colour="black",face="bold"))
+MA_g
+```
+
+## Fig 2C: Prevalence of Up-regulated TEs
+```{r TCGA_upregulated_TE_bar,fig.width=4,fig.height=3}
+DE_up_df <- readRDS(file.path(system.file(package="REdiscoverTEpaper"), "Fig2_data", "TCGA_intergenic_up_TE_stat.RDS"))
+DE_up_df$repClass = gsub("Retroposon","SVA",DE_up_df$repClass)
+colnames(DE_up_df)[4] = "Class"
+bar_g1 = ggplot(DE_up_df,aes(as.factor(count),fill=Class)) + geom_bar()
+bar_g1 = bar_g1 + theme_classic() + scale_fill_manual(values = repclass_col[unique(DE_up_df$Class)])
+bar_g1 = bar_g1 + labs(x="No. Tumor Types (TCGA)",y="No. Up-regulated TEs",title=paste0("Up-regulated TEs"))
+bar_g1 = bar_g1 + theme(axis.title = element_text(size=16),
+                      axis.text = element_text(size=14),
+                      plot.title = element_text(size=16,face="bold"))
+bar_g1
+```
+
+## Figure 2C: Reference barplot of membership in each TE class, according to RepeatMasker
+```{r barplot all TE membership,fig.width=3,fig.height=2}
+TE_member_df = as.data.frame(table(repName_repFam_repClass_TE$repClass))
+TE_member_df$Var1 = gsub("Retroposon","SVA",TE_member_df$Var1)
+TE_member_df$type = "repClass"
+
+TE_member_df$"Class" = gsub("Retroposon","SVA",TE_member_df$Var1)
+
+bar_g2 = ggplot(TE_member_df,aes(x=type,y=Freq,fill=Class))+ geom_bar(stat="identity",position=position_stack())
+bar_g2 = bar_g2 + theme_classic() + scale_fill_manual(values = repclass_col)
+bar_g2 = bar_g2 + labs(x="TE Class",y="No. TE Subfamilies",title="All TEs (n=1052)")
+bar_g2 = bar_g2 + theme(axis.title = element_text(size=14),
+                      axis.text.y = element_text(size=14),
+                      plot.title = element_text(size=12,face="bold"),
+                      axis.text.x = element_blank(),
+                      axis.ticks.x = element_blank())
+bar_g2
+```
+
+## Figure 2D: Consistency between TCGA and CGP TE logFC
+```{r CGP_TCGA_FC, fig.width=13,fig.height=3.5}
+CGP_TCGA_logFC_df <- readRDS(file.path(system.file(package="REdiscoverTEpaper"), "Fig2_data", "intergenic_DE_CGP_TCGA_logFC_consistency_df.RDS"))
+CGP_TCGA_logFC_df = CGP_TCGA_logFC_df[CGP_TCGA_logFC_df$indication%in%c("COAD","KICH","KIRP","STAD"),]
+## only plot for TEs
+CGP_TCGA_logFC_df_TE = CGP_TCGA_logFC_df[CGP_TCGA_logFC_df$repName%in%TE,]
+## remove KIRC
+CGP_TCGA_logFC_df_TE$repClass = gsub("Retroposon","SVA",CGP_TCGA_logFC_df_TE$repClass)
+colnames(CGP_TCGA_logFC_df_TE)[5] = "Class"  
+g = ggplot(CGP_TCGA_logFC_df_TE,aes(x=CGP,y=TCGA)) +
+  geom_point(data=CGP_TCGA_logFC_df_TE[CGP_TCGA_logFC_df_TE$sig==F,], shape=1, colour="gray", alpha = 0.8) +
+  geom_point(data=CGP_TCGA_logFC_df_TE[CGP_TCGA_logFC_df_TE$sig==T,], aes(colour=Class))
+g = g + facet_wrap(~indication, nrow = 1) + theme_bw()
+g = g + scale_colour_manual(values=repclass_col)
+g = g + labs(x=bquote("CGP "~log[2]~" (Fold Change)"),y=bquote("TCGA "~log[2]~" (Fold Change)"))
+g = g + geom_vline(xintercept = c(-1,1),linetype=3) + geom_hline(yintercept = c(-1,1),linetype=3)
+g = g + theme(legend.position = "right",
+              strip.text = element_text(size=16,colour="black"),
+              axis.title=element_text(size=16),
+              axis.text=element_text(size=14),
+              legend.text=element_text(size=12),
+              legend.title = element_text(size=12),
+              panel.grid.major = element_blank(),
+              panel.grid.minor = element_blank(),
+              plot.title =element_text(size=14,colour="black",face="bold"))
+g
+
+```
+
+## Figure 2E: Heatmap of Commonly Up-regulated TEs
+```{r common up TE h prep}
+#1. Load Data and create function
+common_up_RE_list <- readRDS(file.path(system.file(package="REdiscoverTEpaper"), "Fig2_data", "intergenic_common_up_RE_all_for_plot.RDS"))
+common_RE_logFC = common_up_RE_list$logFC
+common_RE_star  = common_up_RE_list$star
+side            = common_up_RE_list$side
+side$repClass   = gsub("Retroposon","SVA",side$repClass)
+colnames(side)  = c("Family","Class")
+## plot based on clustered indications
+
+cluster_indic1 = c("STAD","STAD (CGP)")
+cluster_indic2 = c("BLCA","LIHC","HNSC","PRAD")
+cluster_indic3 = c("COAD","COAD (CGP)")
+cluster_indic4 = c("KIRC")
+cluster_indic5 = c("LUSC","LSC (CGP)")
+cluster_indic6 = c("KIRP","KIRP (CGP)")
+cluster_indic7 = c("LUAD")
+cluster_indic8 = c("KICH","KICH (CGP)")
+cluster_indic9 = c("THCA")
+
+## create function to generate heatmap
+max_DE = max(as.vector(abs(common_RE_logFC)),na.rm=T)
+range_DE = c(0-max_DE,0,max_DE)
+generateH = function(indic){
+  tmp_logFC = common_RE_logFC[,indic,drop=F]
+  tmp_star = common_RE_star[,indic,drop=F]
+  stopifnot(!is.null(tmp_star))
+  h = ComplexHeatmap::Heatmap(tmp_logFC,
+              col = circlize::colorRamp2(range_DE,c("#2166AC","#F7F7F7","#B2182B")),
+              row_title = "",
+              row_title_side = "left",
+              column_title_gp = gpar(fontsize = 18,fontface="bold"),
+              column_title_side = "bottom",
+              cluster_rows = F,
+              cluster_columns = F,
+              show_row_names = F,
+              column_names_side = "top",
+              column_names_gp = gpar(fontsize=18),
+              row_names_gp = gpar(fontsize=18),
+              cell_fun = function(j,i,x,y,width,height,fill){
+                grid.text(tmp_star[i,j],x,y,gp=gpar(fontsize=16),just=c("center","center"),vjust=0.5)
+              },
+              rect_gp = gpar(col = "white", lwd = 2),
+              show_heatmap_legend = FALSE,
+              name="log2FC",
+              heatmap_legend_param=list(title_gp = gpar(fontsize = 14,fontface="bold"),labels_gp=gpar(fontsize=14))
+  )
+  h
+}
+
+## heatmap annotations
+repFam_col = brewer.pal(6,"Pastel1")
+names(repFam_col) = unique((side$Family))
+repFam_h = ComplexHeatmap::Heatmap(side[,"Family",drop=F],name="Family",show_row_names = F,
+           width = unit(4, "mm"),col=repFam_col,
+           column_names_gp = gpar(fontsize=16),column_names_side = "top",
+           heatmap_legend_param=list(title_gp = gpar(fontsize = 14, fontface="bold"), labels_gp=gpar(fontsize=14)))
+
+repClass_h = ComplexHeatmap::Heatmap(side[,"Class",drop=F],name="Class",show_row_names = T,
+            width = unit(4, "mm"),col=repclass_col[unique(side$Class)],
+            column_names_gp = gpar(fontsize=16),
+            column_names_side = "top",row_names_gp = gpar(fontsize=18),
+            heatmap_legend_param=list(title_gp = gpar(fontsize = 14, fontface="bold") ,labels_gp=gpar(fontsize=14)))
+```
+
+```{r common up TE heatmap,fig.width=12,fig.height=10}
+# 2. Generate heatmap
+h1 = generateH(cluster_indic1)
+h1@heatmap_param$show_heatmap_legend = TRUE
+h2 = generateH(cluster_indic2)
+h3 = generateH(cluster_indic3)
+h4 = generateH(cluster_indic4)
+h5 = generateH(cluster_indic5)
+h6 = generateH(cluster_indic6)
+h7 = generateH(cluster_indic7)
+h8 = generateH(cluster_indic8)
+h9 = generateH(cluster_indic9)
+simple_list = h1 + h2 + h3 + h4 + h5 + h6 + h7 + h8 + h9 + repFam_h + repClass_h
+
+draw(simple_list,gap=unit(2,"mm"))
+```
+

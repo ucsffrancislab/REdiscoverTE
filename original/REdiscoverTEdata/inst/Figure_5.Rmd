@@ -1,0 +1,153 @@
+---
+title: "REdiscoverTE Paper: Figure 5"
+author: "Haiyin Chen-Harris"
+date: 'September 3, 2019'
+output:
+  html_document:
+    toc: yes
+    toc_depth: 3
+    theme: cosmo
+    code_folding: hide
+  pdf_document:
+    toc: yes
+    toc_depth: 3
+  word_document: default
+---
+
+```{r options, echo=FALSE, warning=FALSE, message = FALSE}
+library(Biobase) # for 'exprs'
+library(ggrepel)
+library(RColorBrewer)
+library(grid)
+library(gridExtra)
+library(ggplot2)
+library(rmarkdown)
+library(knitr)
+library(dplyr)
+library(plyr)
+library(multiGSEA) # https://github.com/lianos/multiGSEA
+
+options(stringsAsFactors = F)
+options(replace.assign=TRUE, width=90)
+options(scipen=1, digits=3)
+opts_chunk$set(dpi=300, dev=c("png","pdf"), fig.path=paste0("./OUTPUT_FIGURES--Fig5/"),
+         fig.width=7, fig.height=5,
+         fig.align='center',
+         fig.pos='htbp', echo=FALSE, #results='hide',
+         cache=FALSE, message=FALSE, warning=FALSE)
+theme_set(theme_bw())
+
+classColor = c(brewer.pal(9,"Set1"),brewer.pal(11,"Spectral"))
+names(classColor) = c("Simple_repeat","LINE","LTR","SINE","Retroposon","DNA","Low_complexity",
+                      "LTR?","Unknown","rRNA","RNA","srpRNA","Satellite","scRNA","DNA?","RC",
+                      "RC?","snRNA","SINE?","tRNA")
+class2Keep = classColor[c("LINE","LTR","SINE","Retroposon","DNA")]
+```
+
+```{r plot_volcano_function}
+plot_volcano_rep = function(data, mytitle){
+  data.filt <- data %>% filter(is_sig == 1, adj.P.Val < 1e-2, logFC > 1.5)
+  volcano_g = ggplot(data,aes(x= logFC, y= -log10(adj.P.Val))) 
+  volcano_g = volcano_g + geom_point(data=data[data$is_sig == 1,],
+                                     aes(colour=repClass),  #text = paste("repName:", repName)),
+                                     alpha=1, size = 2) + scale_color_manual(name="repClass",values=classColor)
+  volcano_g = volcano_g + geom_point(data=data[!(data$is_sig==1),], colour="black", size=1, alpha=0.3)
+  volcano_g = volcano_g + geom_vline(xintercept=1, colour="grey", linetype=4, alpha=0.8) +
+    geom_hline(yintercept=1.3, colour="grey", linetype=4, alpha=0.8)
+
+  volcano_g = volcano_g + theme_bw() + guides(col=guide_legend(ncol=1,byrow = T),
+                                              #size=guide_legend(ncol=2,byrow = T),
+                                              shape=guide_legend(ncol=1,byrow=T)) 
+  volcano_g = volcano_g + theme(axis.text.x=element_text(size=12,colour = "black"),
+                                axis.text.y=element_text(size=12,colour = "black"),
+                                axis.title=element_text(size=12,face="bold"),
+                                panel.grid.major = element_blank(),
+                                panel.grid.minor = element_blank()) +
+              labs(x="log2 Aza/NT", y="-log10 adj.P ") + 
+              geom_text_repel(data=data.filt, aes(label=data.filt$repName), size=4,
+                      #nudge_x = 0.5, nudge_y = 1,
+                      colour="black") + ggtitle(mytitle)
+  return(volcano_g)
+}
+```
+
+### Figure 5B: `5-Aza` vs. `Untreated` Volcano: TE Differential Expression using intergenic counts
+```{r volcano using intergenic counts}
+repnames.volcano <- readRDS(file.path(system.file(package="REdiscoverTEpaper"), "Fig5_data", "Fig5B_TE_differential_expression.RDS"))
+repnames.volcano.intergenic <- repnames.volcano %>% 
+  mutate(logFC = intergenic_logFC, adj.P.Val = intergenic_adj.P.Val, is_sig = intergenic_sig,
+         repClass = factor(repClass), DE_context = factor(DE_context)) %>% 
+  dplyr::select(repName, repFamily, logFC, adj.P.Val, DE_context, repClass, is_sig) %>% filter(repClass %in% c("DNA", "LTR", "LINE", "SINE", "Retroposon")) %>% filter(!is.na(logFC))
+
+plot_volcano_rep(repnames.volcano.intergenic, "GBM Aza induced intergenic TE")
+```
+
+
+### Figure 5C: Examples of Association Between TEs and Cytokine Gene Signatures
+```{r compute geneset scores}
+gene.vm.obj <- readRDS(file.path(system.file(package="REdiscoverTEpaper"), "Fig5_data", "Shraibman_gene_filtered_voom.RDS"))
+gdb.ifn1    <- readRDS(file.path(system.file(package="REdiscoverTEpaper"), "Fig5_data", "IFN1.geneset.RDS"))
+gdb.il1b    <- readRDS(file.path(system.file(package="REdiscoverTEpaper"), "Fig5_data", "IL1b.geneset.RDS"))
+
+getGenesetScores <- function (genesetEntrez, vm.obj) {
+  if (grepl('^[A-Z]', genesetEntrez[1])) { #if symbols are given
+    genesetEntrez.in.vm <- vm.obj$genes %>% filter(symbol %in% genesetEntrez) %>% pull(entrez_id)
+  } else (genesetEntrez.in.vm <- genesetEntrez[ genesetEntrez %in% vm.obj$genes$entrez_id ])
+  multiGSEA::eigenWeightedMean(vm.obj$E[genesetEntrez.in.vm, ])$score
+}
+
+ifn1.scores <- data.frame(IFN1 = getGenesetScores (gdb.ifn1$featureId, gene.vm.obj))
+il1b.scores <- data.frame(IL1b = getGenesetScores (gdb.il1b$featureId, gene.vm.obj))
+geneset.scores <- cbind(ifn1.scores, il1b.scores)
+```
+
+```{r join dataframe, fig.width=20, fig.height=4}
+non_exonic.DE.TE.list <- repnames.volcano %>% filter(all_sig == 1 | intergenic_sig == 1 | intron_sig == 1, exon_sig %in% c(0, NA)) %>% filter(!repClass %in% c("Simple_repeat", "tRNA", "")) %>% pull(repName)
+intergenic.cpm.eset <- readRDS(file.path(system.file(package="REdiscoverTEpaper"), "Fig5_data", "Shraibman_intergenic_RE_repName_logCPM_rle_normed_eset.RDS"))
+
+df <- cbind(data.frame(t(Biobase::exprs(intergenic.cpm.eset [non_exonic.DE.TE.list, ]))), geneset.scores)
+                      
+pheno.table <- pData(intergenic.cpm.eset) %>% 
+  mutate(Treatment = factor(Treatment), 
+         Treatment = plyr::revalue(Treatment, c("Not treated" = "untreated", "After Decitabine treatment" = "Aza")))
+
+stopifnot(all.equal(rownames(df), as.character(pheno.table$group)))
+intergenic.df <- cbind(df, pheno.table[,c("Cell.Line", "Treatment")])
+```
+
+```{r Fig 5C, fig.width=6, fig.height=6}
+g1 = ggplot(intergenic.df %>% dplyr::select(IFN1, Cell.Line, Treatment, LTR12B), 
+            aes(LTR12B,  IFN1 , color = Treatment)) + facet_wrap(~Cell.Line) +
+  geom_point(size = 3, alpha = 0.8)  
+
+g2 = ggplot(intergenic.df %>% dplyr::select(IFN1, Cell.Line, Treatment, LTR12E), 
+            aes(LTR12E,  IFN1 , color = Treatment)) + facet_wrap(~Cell.Line)+
+  geom_point(size = 3, alpha = 0.8)  
+
+g3 = ggplot(intergenic.df %>% dplyr::select(IL1b, Cell.Line, Treatment, SVA_E), 
+            aes(SVA_E,  IL1b , color = Treatment)) + facet_wrap(~Cell.Line)+
+  geom_point(size = 3, alpha = 0.8)
+  
+g4 = ggplot(intergenic.df %>% dplyr::select(IL1b, Cell.Line, Treatment, LTR10B1), 
+            aes(LTR10B1,  IL1b , color = Treatment)) + facet_wrap(~Cell.Line)+
+  geom_point(size = 3, alpha = 0.8) + theme(axis.text.x=element_text(size=8, angle=90, hjust=1, vjust=0.5))
+
+grid.arrange(g1, g2, g3, g4, ncol = 1)
+```
+
+### Figure 5D: Effect of decitabine treatment on TE peptide presentation
+
+```{r Fig 5D, fig.width=6, fig.height=3}
+TE.df.3 <- readRDS(file.path(system.file(package="REdiscoverTEpaper"), "Fig5_data", "TE.peptides.minimum3spectra.RDS"))
+TE.df.3.hist <- TE.df.3 %>% mutate(peptide.logFC = cut(Area.log2FC, seq(from=-11, to=11, by=0.5)))
+# normal x-axis
+ggplot(TE.df.3.hist, aes(x = peptide.logFC, fill = repClass)) + geom_bar() +
+  scale_fill_manual(name="repClass",values=classColor) + theme_classic() + 
+  scale_x_discrete(drop = FALSE, 
+                   breaks = c( "(-10.5,-10]","(-5,-4.5]",  "(-3,-2.5]", "(-1,-0.5]", "(0,0.5]", "(2,2.5]","(4,4.5]", "(6.5,7]", "(10,10.5]"), 
+                   labels = c( "NT only", "-4.5", "-2.5", "-0.5", "0.5", "2.5", "4.5", "7.0", "Aza only")) +
+  xlab('Peptide log2 Fold Change') + ylab('Number of Peptides') + 
+  geom_vline(xintercept = c(-8, 8),colour="grey",linetype=4,alpha=0.8) + 
+  theme(axis.text.x=element_text(size=12, angle=90, hjust=1, vjust=0.5)) +
+  ggtitle('TE peptide Aza/NT')
+```
