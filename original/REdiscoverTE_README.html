@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+
+<meta charset="utf-8" />
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta name="generator" content="pandoc" />
+
+<title>REdiscoveTE_README.utf8.md</title>
+
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+<style type="text/css">
+h1 {
+  font-size: 34px;
+}
+h1.title {
+  font-size: 38px;
+}
+h2 {
+  font-size: 30px;
+}
+h3 {
+  font-size: 24px;
+}
+h4 {
+  font-size: 18px;
+}
+h5 {
+  font-size: 16px;
+}
+h6 {
+  font-size: 12px;
+}
+.table th:not([align]) {
+  text-align: left;
+}
+</style>
+
+
+</head>
+
+<body>
+
+<style type="text/css">
+.main-container {
+  max-width: 940px;
+  margin-left: auto;
+  margin-right: auto;
+}
+code {
+  color: inherit;
+  background-color: rgba(0, 0, 0, 0.04);
+}
+img {
+  max-width:100%;
+  height: auto;
+}
+.tabbed-pane {
+  padding-top: 12px;
+}
+.html-widget {
+  margin-bottom: 20px;
+}
+button.code-folding-btn:focus {
+  outline: none;
+}
+summary {
+  display: list-item;
+}
+</style>
+
+
+
+<div class="container-fluid main-container">
+
+<div class="fluid-row" id="header">
+</div>
+
+
+<div id="rediscoverte" class="section level1">
+<h1>REdiscoverTE</h1>
+<p>Author: <em>Haiyin Chen</em></p>
+<p>Date: <em>2019-01</em></p>
+</div>
+<div id="overview" class="section level1">
+<h1>Overview</h1>
+<p>This software enables whole-transcriptome RNA-seq simultaneous quantification of repetitive elements and human transcripts. Full description can be found in the publication <code>Kong Y, ..., Chen-Harris H (2019)</code>. It is written in R.</p>
+<p><em>REdiscoverTE</em> takes RNA-seq <code>FASTQ</code> files as input, and produces both raw and normalized counts for the repetitive elements (REs) in subfamilies defined by <a href="http://www.repeatmasker.org/">RepeatMasker</a>.</p>
+</div>
+<div id="pipeline-overview" class="section level1">
+<h1>Pipeline overview</h1>
+<ul>
+<li><em>REdiscoverTE</em> transcriptome (FASTA) sequences are provided for <code>hg38</code> (human). This file is used by the open source software <code>salmon</code> to generate reference index</li>
+<li>Salmon takes input RNAseq <code>FASTQ</code> file -&gt; <code>quant.sf</code></li>
+<li>The R script <code>rollup.R</code> combines the counts at members of a RE into a single value at the subfamily level and produces <code>.RDS</code> files that can be loaded into R and exported if desired.</li>
+</ul>
+</div>
+<div id="installing-running-rediscoverte" class="section level1">
+<h1>Installing &amp; Running REdiscoverTE</h1>
+<p>Follow the steps below to run the <em>REdiscoverTE</em> pipeline on the included simulated RNAseq data.</p>
+<div id="prerequisites" class="section level2">
+<h2>Prerequisites</h2>
+<div id="required-software" class="section level3">
+<h3>1. Required Software</h3>
+<ul>
+<li>Two programs must already be installed: <code>R</code> and <code>salmon</code>.</li>
+<li><code>R</code> (<a href="https://www.r-project.org/" class="uri">https://www.r-project.org/</a>). Tested version is <code>3.4.3</code>.</li>
+<li><code>salmon</code>. Tested version is <code>0.8.2</code>, available at the developers’ github page: <a href="https://github.com/COMBINE-lab/salmon/releases/tag/v0.8.2" class="uri">https://github.com/COMBINE-lab/salmon/releases/tag/v0.8.2</a> .</li>
+</ul>
+</div>
+<div id="required-ram-and-disk-space" class="section level3">
+<h3>2. Required RAM and disk space</h3>
+<ul>
+<li><code>89 gigabytes</code> of disk space is required for the Salmon index.</li>
+<li><code>30 GB of RAM</code> is recommended for <strong>Salmon</strong>. Salmon requires a substantial amount of RAM with the included 5-million-entry FASTA reference.</li>
+</ul>
+</div>
+<div id="time-for-each-step" class="section level3">
+<h3>3. Time for each step</h3>
+<ol style="list-style-type: decimal">
+<li>Index generation: 90 minutes on a 2017 16-core 2.6 GHz Xeon processor.</li>
+<li>Salmon alignment: ~30-90 minutes. ~30 minutes for a 64 million sequence 50bp SE input FASTQ file on the same Xeon CPU as above.</li>
+<li>Rollup: ~5 minutes per <code>quant.sf</code> file. (There will be one <code>quant.sf</code> file for each input sample: for single-end reads, there will be a 1:1 correspondence between <code>.fastq</code> and <code>quant.sf</code> files).</li>
+</ol>
+</div>
+<div id="running-the-rediscoverte-pipeline-on-the-included-sample-data" class="section level3">
+<h3>4. Running the <em>REdiscoverTE</em> pipeline on the included sample data</h3>
+<ul>
+<li>You should be able enter the project directory (<code>cd /path/to/your/rollup_dir/</code>) and then run <code>make all</code> to run the commands in the included Makefile.</li>
+<li>This will run the two primary steps of this process: the <code>salmon</code> quantification step and the <code>Rollup</code> step.</li>
+<li>You can include multiple FASTQ files at the same time: each sample will generate a single output column in the final results.</li>
+<li>Both single-end and paired-end FASTQ files are accepted.</li>
+</ul>
+</div>
+<div id="interpreting-the-result-files" class="section level3">
+<h3>5. Interpreting the result files</h3>
+<ul>
+<li>The result files (referred to as <code>rollup</code> output files) R data files in <code>.RDS</code> format.</li>
+<li>You can load and view (or re-export) them as follows:
+<ul>
+<li><code>x &lt;- readRDS(&quot;filename.RDS&quot;)                # load the data file</code></li>
+<li>The files are various data types; for example, <code>DGELists</code> (from the <a href="https://www.rdocumentation.org/packages/edgeR/versions/3.14.0/topics/DGEList">EdgeR</a> package) and <code>ExpressionSets</code> (from the <a href="https://www.rdocumentation.org/packages/Biobase/versions/2.32.0/topics/ExpressionSet">BioBase</a> package).</li>
+</ul></li>
+</ul>
+</div>
+</div>
+<div id="included-scripts" class="section level2">
+<h2>Included scripts</h2>
+<ol style="list-style-type: decimal">
+<li><code>rollup.R</code>
+<ul>
+<li>described above</li>
+</ul></li>
+<li><code>Makefile</code>
+<ul>
+<li>a list of example commands for running a <em>REdiscoverTE</em> pipeline. Running <code>make all</code> will run the entire pipeline on the included sample data, if the prerequisite software is present.</li>
+</ul></li>
+</ol>
+</div>
+<div id="included-annotation-files-used-by-rollup" class="section level2">
+<h2>Included annotation files used by <em>Rollup</em></h2>
+<p>These four required files are all for <code>hg38</code> (human). They are included with this distribution of <em>REdiscoverTE</em>.</p>
+<ol style="list-style-type: decimal">
+<li><code>rollup_annotation/GENCODE_v26_basic_transcript_rmsk_stdchr_hg38_introns_ov_REs.fa.xz</code> (human genome FASTA file, compressed with <code>xz</code>)</li>
+<li><code>rollup_annotation/rmsk_annotation_Salmon.RDS</code> (R data object containing information about repetitive elements, loadable from within R with <code>readRDS</code>)</li>
+<li><code>rollup_annotation/GENCODE.V26.Basic_Gene_Annotation_md5.RDS</code> (R data object containing information about <em>GENCODE v. 26 Basic</em> human transcripts, loadable from within R with <code>readRDS</code>)</li>
+<li><code>rollup_annotation/repName_repFamily_repClass_map.tsv</code> (tab-delimited text file)</li>
+</ol>
+<div id="file-1-of-4-hg38-genome-and-associated-elements" class="section level3">
+<h3>File #1 of 4: <code>hg38</code> genome and associated elements</h3>
+<ul>
+<li>Path: <code>rollup_annotation/GENCODE_v26_basic_transcript_rmsk_stdchr_hg38_introns_ov_REs.fa.xz</code></li>
+<li>This is a standard FASTA file. The record names (e.g. <code>9bd267abb08d45904c1741db501b5bdd</code>) are MD5 checksums of each sequence.</li>
+<li>This is the file used to build the 89 gigabyte Salmon index.</li>
+<li>This FASTA file consists of three different types of sequences:
+<ol style="list-style-type: decimal">
+<li><code>hg38</code> transcripts from GENCODE v. 26 (basic).</li>
+<li>Any introns from GENCODE v. 26 (basic) that <em>also</em> contained one or more repetitive elements.</li>
+<li>All repetitive elements from RepeatMasker.</li>
+</ol></li>
+<li>This file is compressed with the <code>xz</code> utility, which is similar to <code>gzip</code> or <code>zip</code>. If desired, it can be uncompressed with the standard <code>unxz</code> utility. It can be viewed on the command line with the following command: <code>xzcat ./rollup_annotation/GENCODE_v26_basic_transcript_rmsk_stdchr_hg38_introns_ov_REs.fa.xz | less -S</code></li>
+</ul>
+</div>
+<div id="viewing-.rds-files" class="section level3">
+<h3>Viewing <code>.RDS</code> files</h3>
+<p>The <code>.RDS</code> files can be viewed as follows: 1. Begin a new <code>R</code> session. 2. Within R: <code>x &lt;- readRDS(&quot;PATH/TO/FILENAME&quot;)</code> 3. Within R: <code>head(x) # view the top 6 rows</code></p>
+</div>
+<div id="file-2-of-4-repeatmasker-annotation-hg38" class="section level3">
+<h3>File #2 of 4: RepeatMasker annotation (hg38)</h3>
+<ul>
+<li>Path: <code>rollup_annotation/rmsk_annotation_Salmon.RDS</code></li>
+<li>This file contains the correspondences between the 32-character MD5s (see above) to each RMSK (RepeatMasker) sequence. It also contains RMSK annotations and <em>genomic context</em> (<em>intergenic</em>, <em>intron</em>, or <em>exon</em>) for each MD5.</li>
+<li>Annotation is from <code>GENCODE v26 *Basic*</code>. snRNA sequences and all duplicate sequences were removed.</li>
+<li>Number of unique MD5s: <code>5099056</code></li>
+<li>Number of unique RepeatMakser <em>repNames</em> (subfamilies): <code>17468</code></li>
+<li>Example of what this repetitive element annotation file looks like after being loaded into <code>R</code>:</li>
+</ul>
+<pre><code>md5                              n.loci   repName      repClass     repFamily selected_feature            idx
+9bd267abb08d45904c1741db501b5bdd      1 (TAACCC)n Simple_repeat Simple_repeat       intergenic 1__10001_10468
+e98ef316f41469ed5d18179d6f4c246f      1      TAR1     Satellite          telo       intergenic 1__10469_11447
+72834a9eaede5c9cad25de2588a65486      1      MIR3          SINE           MIR           intron 1__15265_15355
+accd2fc2b8c6fb63f05975ebeaf89439      1        L3          LINE           CR1           intron 1__19972_20405
+...</code></pre>
+</div>
+<div id="file-3-of-4-human-transcript-annotation" class="section level3">
+<h3>File #3 of 4: Human transcript annotation</h3>
+<ul>
+<li>Path: <code>rollup_annotation/GENCODE.V26.Basic_Gene_Annotation_snRNA_removed_md5.RDS</code></li>
+<li>Transcript (and gene) annotation for the hg38 human genome assembly</li>
+<li>Mapping between MD5 of transcripts from <code>GENCODE v.26 BASIC</code>.</li>
+<li><code>98,029</code> <em>unique</em> ENSEMBL transcripts IDs (<code>ENST</code> IDs) in total</li>
+<li><code>57,374</code> <em>unique</em> ENSEMBL gene IDs (<code>ENSG</code> IDs).</li>
+<li><code>55,842</code> <em>unique</em> ‘symbol’ (gene symbols)</li>
+<li>Example of what this transcript annotation file looks like:</li>
+</ul>
+<pre><code>md5                        n.genes transcript_ID    ensembl_ID      symbol     geneID
+0001d490f52254a5ada6d26...       1 ENST000002630... ENSG00000083... ZNF264     9422
+0002168cd59867bac9fbab4...       1 ENST000004428... ENSG00000109... CLNK       116449
+0002d0449e073ab67c8a800...       1 ENST000003175... ENSG00000163... ZMYM6      9204
+000400e08761c20fdf45ece...       1 ENST000006355... ENSG00000236... LINC011... NA
+...                            ... ...              ...             ...        ...</code></pre>
+</div>
+<div id="file-4-of-4-re-category-taxonomic-hierarchy-mapping" class="section level3">
+<h3>File #4 of 4: RE category (taxonomic hierarchy) mapping</h3>
+<ul>
+<li>Path: <code>rollup_annotation/repName_repFamily_repClass_map.tsv</code></li>
+<li>Three columns, from most-specific to least-specific annotation category: <code>repName</code>, <code>repFamily</code>, and <code>repClass</code>. The term <code>repName</code> is sometimes also referred to as <code>subfamily</code>.</li>
+<li>Example of what this file looks like:</li>
+</ul>
+<pre><code> repName    repFamily     repClass
+ 5S         rRNA          rRNA
+ 7SK        RNA           RNA
+ 7SLRNA     srpRNA        srpRNA
+ (AAAAAAC)n Simple_repeat Simple_repeat
+ ...        ...           ...</code></pre>
+<ul>
+<li>Note that this file differs slightly from <code>rmsk_annotation_Salmon.RDS</code>: the RDS file contains multiple categories joined with commas (e.g. <code>(AAAAACA)n,(CAAAAA)n</code>), which are not included in this mapping file.</li>
+</ul>
+</div>
+</div>
+<div id="output-files-in-.rds-r-data-format." class="section level2">
+<h2>Output files in <code>.RDS</code> R data format.</h2>
+<p>To read these files into R, from within an R session: * <code>library(edgeR);</code> * <code>x &lt;- readRDS(&quot;the_filename.RDS&quot;)</code> * <code>x</code> will be a <code>DGEList</code> data type, which is part of the <code>edgeR</code> package. See: <a href="https://www.rdocumentation.org/packages/edgeR/versions/3.14.0/topics/DGEList" class="uri">https://www.rdocumentation.org/packages/edgeR/versions/3.14.0/topics/DGEList</a></p>
+<ul>
+<li><code>GENE</code>: Transcript-level expression values:
+<ul>
+<li><code>GENE_1_raw_counts.RDS</code>: raw counts DGEList data object.</li>
+<li><code>GENE_2_counts_normalized.RDS</code>: normalized counts (by total gene counts) DGEList data object.</li>
+<li><code>GENE_3_TPM.RDS</code>: TPM (transcripts per million) for each gene/transcript. DGEList data object.</li>
+</ul></li>
+<li><code>RE all</code>: Repetitive elements found anywhere in the genome. Granularity for all RE reporting is at <code>repName</code> level (where the three levels we use are <code>name</code>, <code>family</code>, and <code>class</code>, in increasing order of generality).
+<ul>
+<li><code>RE_all_1_raw_counts.RDS</code>: raw counts DGEList data object.</li>
+<li><code>RE_all_2_counts_normalized.RDS</code>: note that counts are normalized by total gene counts</li>
+<li><code>RE_all_3_TPM.RDS</code>: TPM (transcripts per million) for each repetitive element ‘repName’. DGEList data object.</li>
+</ul></li>
+<li><code>RE exon</code>: Subset of <code>RE all</code>: only repetitive elements found at least partially within an annotated exon.
+<ul>
+<li><code>RE_exon_1_raw_counts.RDS</code>: raw counts DGEList data object.</li>
+<li><code>RE_exon_2_counts_normalized.RDS</code>: counts are normalized by total gene counts</li>
+<li><code>RE_exon_3_TPM.RDS</code>: TPM (transcripts per million) for each repetitive element ‘repName’. DGEList data object.</li>
+</ul></li>
+<li><code>RE intron</code>: Subset of <code>RE all</code>: only repetitive elements that do not have any overlap with an exon, and have some overlap with an intron.
+<ul>
+<li><code>RE_intron_1_raw_counts.RDS</code>: raw counts DGEList data object.</li>
+<li><code>RE_intron_2_counts_normalized.RDS</code>:counts are normalized by total gene counts</li>
+<li><code>RE_intron_3_TPM.RDS</code>: TPM (transcripts per million) for each repetitive element ‘repName’. DGEList data object.</li>
+</ul></li>
+<li><code>RE intergenic</code>: Subset of <code>RE all</code>: only repetitive elements that have no overlap with annotated introns or exons.
+<ul>
+<li><code>RE_intergenic_1_raw_counts.RDS</code>: raw counts DGEList data object.</li>
+<li><code>RE_intergenic_2_counts_normalized.RDS</code>: counts are normalized by total gene counts</li>
+<li><code>RE_intergenic_3_TPM.RDS</code>: TPM (transcripts per million) for each repetitive element ‘repName’. DGEList data object.</li>
+</ul></li>
+</ul>
+</div>
+</div>
+
+</div>
+
+</body>
+</html>

@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+
+<meta charset="utf-8" />
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta name="generator" content="pandoc" />
+
+<title>REdiscoverTEdata_README.utf8.md</title>
+
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style type="text/css">
+h1 {
+  font-size: 34px;
+}
+h1.title {
+  font-size: 38px;
+}
+h2 {
+  font-size: 30px;
+}
+h3 {
+  font-size: 24px;
+}
+h4 {
+  font-size: 18px;
+}
+h5 {
+  font-size: 16px;
+}
+h6 {
+  font-size: 12px;
+}
+.table th:not([align]) {
+  text-align: left;
+}
+</style>
+
+
+</head>
+
+<body>
+
+<style type="text/css">
+.main-container {
+  max-width: 940px;
+  margin-left: auto;
+  margin-right: auto;
+}
+code {
+  color: inherit;
+  background-color: rgba(0, 0, 0, 0.04);
+}
+img {
+  max-width:100%;
+  height: auto;
+}
+.tabbed-pane {
+  padding-top: 12px;
+}
+.html-widget {
+  margin-bottom: 20px;
+}
+button.code-folding-btn:focus {
+  outline: none;
+}
+summary {
+  display: list-item;
+}
+</style>
+
+
+
+<div class="container-fluid main-container">
+
+<!-- tabsets -->
+
+<div class="fluid-row" id="header">
+</div>
+
+
+<div id="rediscovertedata" class="section level1">
+<h1>REdiscoverTEdata</h1>
+<p>Author: <em>Haiyin Chen</em></p>
+<p>Date: <em>2019-09</em></p>
+</div>
+<div id="overview" class="section level1">
+<h1>Overview</h1>
+<p>This R package enables reproducibility of main figures from the paper TRANSPOSABLE ELEMENT EXPRESSION IN TUMORS IS ASSOCIATED WITH IMMUNE INFILTRATION AND INCREASED ANTIGENICITY by <code>Kong Y, ..., Chen-Harris H (2019)</code>.</p>
+</div>
+<div id="contents" class="section level1">
+<h1>Contents</h1>
+<p><code>REdiscoverTEdata</code> is an <code>R</code> package that can be installed locally. It contains source R Markdown (<code>.Rmd</code>) files for five main figures from the paper. Each <code>Rmd</code> file can generate one set of figures, either in HTML format or PDF format.</p>
+</div>
+<div id="installation-process" class="section level1">
+<h1>Installation Process</h1>
+<ol style="list-style-type: decimal">
+<li>Install <code>R</code> as described at <a href="https://www.r-project.org/">https://www.r-project.org/</a>. <code>REdiscoverTEdata</code> has been tested with <code>R 3.4.3</code>, <code>R 3.5.1</code>.</li>
+<li>Install <code>RStudio</code>, which we recommend using to process .Rmd files into final figures. <code>RStudio</code> can be downloaded from <a href="https://www.rstudio.com/">https://www.rstudio.com/</a>.</li>
+<li>Install the <code>REdiscoverTEdata</code> package (library) locally with the following:
+<ul>
+<li><code>cd /your/DOWNLOADS/directory/</code></li>
+<li><code>tar -xvf REdiscoverTEdata.tar.gz</code> (uncompress the downloaded archive)</li>
+<li><code>R CMD INSTALL REdiscoverTEdata</code></li>
+</ul></li>
+</ol>
+<ul>
+<li>That command should automatically install the prerequisite libraries. You will find the <code>.Rmd</code> files for each figure in the <code>REdiscoverTEdata/inst/</code> subdirectory.</li>
+</ul>
+</div>
+<div id="list-of-r-modules-used-by-rediscoverte" class="section level1">
+<h1>List of R modules used by REdiscoverTE</h1>
+<ul>
+<li>Biobase</li>
+<li>ComplexHeatmap</li>
+<li>circlize</li>
+<li>dplyr</li>
+<li>DT</li>
+<li>GenomicRanges</li>
+<li>ggplot2</li>
+<li>ggrepel</li>
+<li>grid</li>
+<li>gridExtra</li>
+<li>knitr</li>
+<li>multiGSEA (not a CRAN package, see below)</li>
+<li>plyr</li>
+<li>RColorBrewer</li>
+<li>rmarkdown</li>
+<li>stats</li>
+</ul>
+<p><code>multiGSEA</code> is available on github at <a href="https://github.com/lianos/multiGSEA" class="uri">https://github.com/lianos/multiGSEA</a> (you may need to install this manually depending on the version of R and bioconductor you are using)</p>
+</div>
+<div id="reproducing-figures-from-the-paper" class="section level1">
+<h1>Reproducing figures from the paper</h1>
+<ul>
+<li>Once <code>REdiscoverTEdata</code> is installed to your <code>R</code> library directory, you can launch <code>RStudio</code> and, from within <code>RStudio</code>, open any of the following <code>.Rmd</code> (R Markdown) files.
+<ul>
+<li><code>REdiscoverTEdata/inst/Figure_1.Rmd</code></li>
+<li><code>REdiscoverTEdata/inst/Figure_2.Rmd</code></li>
+<li><code>REdiscoverTEdata/inst/Figure_3.Rmd</code></li>
+<li><code>REdiscoverTEdata/inst/Figure_4.Rmd</code></li>
+<li><code>REdiscoverTEdata/inst/Figure_5.Rmd</code></li>
+</ul></li>
+<li>Once an <code>.Rmd</code> file is open in <code>RStudio</code>, you can <code>knit</code> it (convert it to a figure) as follows:
+<ul>
+<li><code>File Menu</code> -&gt; <code>Knit Document</code></li>
+<li>alternatively, you can click on the “Knit” submenu and select <code>Knit to HTML</code> or <code>Knit to PDF</code>.</li>
+</ul></li>
+<li>The output from the <code>knit</code> operation will be an HTML (or PDF) file with the same name as the <code>.Rmd</code>, in the same directory.</li>
+</ul>
+</div>
+<div id="tcga-te-expression-matrix" class="section level1">
+<h1>TCGA TE expression matrix</h1>
+<ul>
+<li>TCGA TE expression matrix for 7000+ samples and 1000+ TE subfamilies can be found in the subdirectory <code>REdiscoverTEdata/inst/Fig4_data/</code> under the filename <code>eset_TCGA_TE_intergenic_logCPM.RDS</code>. The matrix is stored in the form of ExpressionSet, a data structure class defined in the <code>Biobase</code> package.</li>
+</ul>
+</div>
+
+
+
+
+</div>
+
+</body>
+</html>
