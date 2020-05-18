@@ -1,0 +1,144 @@
+---
+title: "REdiscoverTE Paper: Figure 3"
+author: "Yu Kong, Haiyin Chen-Harris"
+date: 'September 3, 2019'
+output:
+  html_document:
+    toc: yes
+    toc_depth: 3
+    theme: cosmo
+    code_folding: hide
+  pdf_document:
+    toc: yes
+    toc_depth: 3
+  word_document: default
+---
+
+```{r options, echo=FALSE, warning=FALSE, message = FALSE}
+library(rmarkdown)
+library(knitr)
+library(RColorBrewer)
+library(grid)
+library(gridExtra)
+library(ComplexHeatmap)
+library(circlize) # for the 'colorRamp2' function
+library(ggplot2)
+options(stringsAsFactors = F)
+options(replace.assign=TRUE, width=90)
+opts_chunk$set(dpi=300, dev=c("png","pdf"), fig.path=paste0("./OUTPUT_FIGURES--Fig3/"),
+         fig.width=7, fig.height=7, 
+         fig.align='center', 
+         fig.pos='htbp', echo=FALSE, #results='hide', 
+         cache=FALSE, message=FALSE, warning=FALSE)
+```
+
+## Figure 3A: Barplot of hypo/hyper proportion
+
+All 450k DMCs vs. DMCs overlapping Intergenic TEs
+```{r fig3A,fig.width=8,fig.height=6}
+TE      <- readRDS(file.path(system.file(package="REdiscoverTEpaper"), "Fig2_data", "TE_repNames.RDS"))
+DMC_df2 <- readRDS(file.path(system.file(package="REdiscoverTEpaper"), "Fig3_data", "Methylation__fig3_1_DMC_all_vs_TE.RDS"))
+# [DMC_df2$type=="total",]
+g_bar2 = ggplot(DMC_df2,aes(x=indication, y=value, fill=DMC)) + geom_bar(data=DMC_df2,aes(x=indication, y=value, fill=DMC), stat="identity", position="dodge", colour="white")
+g_bar2 = g_bar2 + geom_bar(data=DMC_df2[DMC_df2$type=="Intergenic_TE",],aes(x=indication,y=value,fill=DMC),stat="identity",position = "dodge",colour="white",size=1)
+g_bar2 = g_bar2 + ylim(-0.35,0.35) + scale_fill_manual(values=c("hypo"="#1F78B4","hyper"="#D95F02"),
+                                                       labels=c("CpGs demethylated ","CpGs methylated"))
+g_bar2 = g_bar2 + labs(x="",y=" Proportion of DMC              Proportion of DMC\nat TE CpGs                         at 450K CpGs",title="Proportion of Differentially Methylated CpGs")
+g_bar2 = g_bar2 + scale_y_continuous(breaks=seq(-0.3,0.3,0.1),labels = c("30%","20%","10%","0","10%","20%","30%"))
+g_bar2 = g_bar2 + theme_classic() + theme(legend.position = "bottom",
+                                        axis.title = element_text(size=14),
+                                        axis.text.x = element_text(size=14,angle=90, vjust=0.5, hjust=0.5),
+                                        axis.text.y = element_text(size=14),
+                                        plot.title = element_text(size=16,face="bold"),
+                                        legend.text = element_text(size=14),
+                                        legend.title = element_text(size=14))
+g_bar2
+```
+
+## Figure 3B: logR up/down DE TEs vs. logR hypo/hyper DMCs
+### 3B PanelA. DMCs in Intergenic TEs
+```{r Fig3B-1,fig.width=5,fig.height=4.5}
+TCGA_intergenic_summary <- readRDS(file.path(system.file(package="REdiscoverTEpaper"), "Fig3_data", "Methylation__TCGA_intergenic_DE_vs_DMC_summary.RDS"))
+g = ggplot(TCGA_intergenic_summary,aes(x=up_down_logR,y=hypo_hyper_logR,label=indication)) + geom_point(colour="#1F78B4",size=3) 
+g = g + geom_text(vjust=0,hjust=-0.15) + theme_classic()+ xlim(-2.6,4.2)
+g = g + labs(x="log Ratio DE TEs\n (up regulated TE)/(down regulated TE)",y="log Ratio DMCs in TEs\n (demethylated CpGs)/(methylated CpGs)")
+g = g + geom_vline(xintercept=0,colour="gray50",linetype=2,size=0.6) + geom_hline(yintercept=0,colour="gray50",linetype=2,size=0.6)
+g = g + theme(axis.title = element_text(size=14),
+              axis.text = element_text(size=14))
+g
+```
+
+### Figure S3C (related to Fig 3B): DMCs in all 450k
+```{r Fig S3C,fig.width=5,fig.height=4.5}
+TCGA_summary <- readRDS(file.path(system.file(package="REdiscoverTEpaper"), "Fig3_data", "Methylation__TCGA_all_DE_vs_all_DMC_summary.RDS"))
+g1 = ggplot(TCGA_summary,aes(x=up_down_logR,y=hypo_hyper_logR,label=indication)) + geom_point(colour="#1F78B4",size=3) 
+g1 = g1 + geom_text(vjust=0,hjust=-0.15) + theme_classic() + xlim(-1.7,3.2)
+g1 = g1 + labs(x="log Ratio All DE TEs\n (up regulated TE)/(down regulated TE)",y="log Ratio All DMCs \n (demethylated CpGs)/(methylated CpGs)")
+g1 = g1 + geom_vline(xintercept=0,colour="gray50",linetype=2,size=0.6) + geom_hline(yintercept=0,colour="gray50",linetype=2,size=0.6)
+g1 = g1 + theme(axis.title = element_text(size=14),
+              axis.text = element_text(size=14))
+g1
+```
+
+## Figures 3C-3G. Square Plot Showing DE/DM Patterns and Associations for Intergenic L1HS in BLCA
+```{r Fig3C to 3G BLCA,fig.align="center",fig.height=8, fig.width=40}
+element="L1HS"
+## panel 1. Exp
+BLCA_exp <- readRDS(file.path(system.file(package="REdiscoverTEpaper"), "Fig3_data", "Methylation__square__BLCA_exp.RDS"))
+BLCA_exp_g = exp_plot(BLCA_exp,element)
+## panel 2. Methylation
+BLCA_bVals <- readRDS(file.path(system.file(package="REdiscoverTEpaper"), "Fig3_data", "Methylation__square__BLCA_bVals.RDS"))
+BLCA_bVals_g = methy_plot(BLCA_bVals,element)
+## panel3. Cor: Exp vs. Methy
+BLCA_cor_scatter <- readRDS(file.path(system.file(package="REdiscoverTEpaper"), "Fig3_data", "Methylation__square__BLCA_methy_exp_cor.RDS"))
+BLCA_cor_scatter_g = scatter_cor_plot(BLCA_cor_scatter,element)
+## panel4. Cor around L1HS
+BLCA_spatial_cor <- readRDS(file.path(system.file(package="REdiscoverTEpaper"), "Fig3_data", "Methylation__square__BLCA_cor_coef.RDS"))
+BLCA_spatial_cor_g = cor_plot(BLCA_spatial_cor,element) + coord_cartesian(ylim=c(-0.5,0.1))
+## panel5. DMC density
+BLCA_DMC <- readRDS(file.path(system.file(package="REdiscoverTEpaper"), "Fig3_data", "Methylation__square__BLCA_DMP_density.RDS"))
+BLCA_DMC_g = plot_DMP_density(BLCA_DMC,element) + labs(title="DMCs Distribution\n 10kb around L1HS")
+grid.arrange(arrangeGrob(BLCA_exp_g,BLCA_bVals_g,BLCA_cor_scatter_g,
+             BLCA_spatial_cor_g,BLCA_DMC_g,respect=T,ncol=5,widths = c(1,1,1,1,1.2)))
+```
+
+## Figures 3H-3J. Heatmap for Differential Expression, Differential Methylation, and Correlation of Expression/Methylation
+
+Selection Criteria:
+   1. Correlation: `abs(cor) ≥ 0.4`: Intergenic Expression and methylation of intergenic CpGs within 1kb of TE
+   2. Intergenic CpG counts overlapping within 500bp +/- of TEs: `≥ 40`
+
+```{r Fig3H to 3J,fig.width=14,fig.height=7}
+intergenic_DE     = readRDS(file=file.path(system.file(package="REdiscoverTEpaper"), "Fig3_data", "Methylation__complex_heatmap_intergenic_DE.RDS"))
+intergenic_DE_h   = plotDEHeat(intergenic_DE$logFC,intergenic_DE$star)
+intergenic_bVals  = readRDS(file=file.path(system.file(package="REdiscoverTEpaper"), "Fig3_data", "Methylation__complex_heatmap_intergenic_delta_beta.RDS"))
+col_order         = colnames(intergenic_DE$logFC)[column_order(intergenic_DE_h)]
+intergenic_beta_h = plotBetaHeat(intergenic_bVals[rownames(intergenic_DE$logFC),col_order])
+intergenic_cor    = readRDS(file=file.path(system.file(package="REdiscoverTEpaper"), "Fig3_data", "Methylation__complex_heatmap_intergenic_cor.RDS"))
+intergenic_cor_h  = plotCorHeat(intergenic_cor$cor[rownames(intergenic_DE$logFC),col_order], intergenic_cor$star[rownames(intergenic_DE$logFC),col_order])
+
+# side annotation
+rep_class = c(brewer.pal(9,"Set1"),brewer.pal(11,"Spectral"))
+names(rep_class) = c("Simple_repeat","LINE","LTR","SINE","SVA","DNA","Low_complexity",
+                     "LTR?","Unknown","rRNA","RNA","srpRNA","Satellite","scRNA","DNA?","RC",
+                     "RC?","snRNA","SINE?","tRNA")
+
+repName_Fam_Class <- readRDS(file.path(system.file(package="REdiscoverTEpaper"), "Fig2_data", "repName_repClass_repFam_TE.RDS"))
+side = repName_Fam_Class[match(rownames(intergenic_DE$logFC),repName_Fam_Class$repName),]
+rownames(side) = side$repName
+side = side[rownames(intergenic_DE$logFC),]
+side = side[,-1]
+colnames(side)=c("Class","Family")
+side$Class = gsub("Retroposon","SVA",side$Class)
+intergenic_repFam_h1 = Heatmap(side[,2,drop=F],name="Family",show_row_names = F,
+                               cluster_rows = F,width=unit(3,"mm"),column_names_gp = gpar(fontsize=18),
+                               col=brewer.pal(length(unique(side$Family)),"Dark2"),
+                               heatmap_legend_param = list(legend_direction="horizontal"))
+intergenic_repClass_h1 = Heatmap(side[,1,drop=F],name="Class",show_row_names = F,
+                                 column_names_gp = gpar(fontsize=18),cluster_rows =  F,
+                                 width = unit(3, "mm"),col=rep_class[unique(side$Class)],
+                                 heatmap_legend_param = list(legend_direction="horizontal"))
+
+h = intergenic_DE_h + intergenic_beta_h + intergenic_cor_h + intergenic_repFam_h1 + intergenic_repClass_h1 
+ComplexHeatmap::draw(h,heatmap_legend_side="bottom")
+```

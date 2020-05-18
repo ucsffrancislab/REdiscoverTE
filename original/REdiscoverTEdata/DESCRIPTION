@@ -1,0 +1,23 @@
+Package: REdiscoverTEdata
+Type: Package
+Title: Data and analysis code for reproducing main figures for the
+        manuscript,"Transposable ELement Expression in Tumors Is
+        Assocaited with Immune Infiltration and Increased Antigenicity"
+        by Kong, ..., Chen-Harris
+Version: 1.0.0
+Date: 2019-09-03
+Author: Haiyin Chen <haiyin.chen@gmail.com>
+Description: Data and software R package enabling the reproduction of main figures presented in the REdiscoverTE paper. 
+Depends: R (>= 3.5.1)
+License: CreativeCommons 3.0
+Imports: Biobase, ComplexHeatmap (>= 2.1.0), circlize, dplyr, DT,
+        GenomicRanges, ggplot2, ggrepel, grid, gridExtra, knitr,
+        multiGSEA, plyr, RColorBrewer, rmarkdown, stats
+Suggests: GeneSetDb.MSigDB.Hsapiens.v61
+Remotes: lianos/multiGSEA@develop, lianos/GeneSetDb.MSigDB.Hsapiens.v61
+Encoding: UTF-8
+LazyData: true
+RoxygenNote: 6.1.1
+NeedsCompilation: no
+biocViews: ReproducibleResearch
+Packaged: 2019-09-27 22:16:11 UTC; haiyin

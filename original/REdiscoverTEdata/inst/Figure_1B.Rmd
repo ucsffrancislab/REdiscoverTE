@@ -1,0 +1,74 @@
+---
+title: "REdiscoverTE Paper: Figure 1B"
+author: "Ashley Cass, Yu Kong, Haiyin Chen-Harris"
+date: 'September 3, 2019'
+output:
+  html_document:
+    toc: yes
+    toc_depth: 3
+    theme: cosmo
+    code_folding: hide
+  pdf_document:
+    toc: yes
+    toc_depth: 3
+  word_document: default
+---
+
+```{r options, echo=FALSE, warning=FALSE, message = FALSE}
+library(dplyr)
+library(ggplot2)
+library(RColorBrewer)
+library(rmarkdown)
+library(knitr)
+options(stringsAsFactors = F)
+options(replace.assign=TRUE, width=90)
+options(scipen=1, digits=3)
+opts_chunk$set(dpi=150, dev=c("png","pdf"), fig.path=paste0("./OUTPUT_FIGURES--Fig1B/"),
+         fig.width=7, fig.height=7, 
+         fig.align='center', 
+         fig.pos='htbp', echo=FALSE, #results='hide', 
+         cache=FALSE, message=FALSE, warning=FALSE,cache.lazy = FALSE)
+```
+
+```{r plotting function}
+mrd = function(x,y){ # Mean Relative Difference
+  res = mean((x-y)/(x+y),na.rm=T)
+  res
+}
+
+mard = function(x,y){ # Mean Absolute Relative Difference
+  res = mean(abs(x-y)/(x+y),na.rm=T)
+  res
+}
+
+rollup_count_plot = function(data){
+  ## 1. calculate stats
+  stat = as.data.frame(data %>% group_by(region,index) %>% summarise(r = signif(cor(salmon_numReads,sim_numReads,method="spearman"),2),
+                                                                           MRD = signif(mrd(salmon_numReads,sim_numReads),1),
+                                                                           MARD = signif(mard(salmon_numReads,sim_numReads),1)))
+  g = ggplot(data,aes(x=log10(sim_numReads+1),y=log10(salmon_numReads+1))) + stat_bin2d(bins=50,color="black")
+  g = g + facet_grid(index~region) + geom_abline(slope=1, intercept=0, aes(colour="grey"))
+  g = g + scale_fill_gradientn(colours = brewer.pal(9, "Reds"),trans="log10",breaks=c(1,10,50)) + theme_bw()
+  g = g + labs(x=bquote(log[10]~" (Simulated counts + 1)"), y = bquote(log[10]~" (Salmon counts + 1)")) 
+  g = g + theme(strip.text = element_text(size=16,colour="black"),
+                    axis.title=element_text(size=16),
+                    axis.text=element_text(size=14),
+                    legend.text=element_text(size=12),
+                    legend.title = element_text(size=12),
+                    panel.grid.major = element_blank(),
+                    panel.grid.minor = element_blank(),
+                    plot.title =element_text(size=16,colour="black",face="bold"))
+  g = g + geom_text(data=stat,aes(label=paste0("r = ", r)), x=-Inf, y=Inf,hjust=-0.2,vjust=1.1,size=4)
+  g = g + geom_text(data=stat,aes(label=paste0("MRD = ", MRD)), x=-Inf, y=Inf,hjust=-0.1,vjust=2.3,size=4)
+  g = g + geom_text(data=stat,aes(label=paste0("MARD = ", MARD)), x=-Inf, y=Inf,hjust=-0.1,vjust=3.5,size=4)
+  g
+}
+```
+
+## Figure 1B: Simulated THCA sample: subfamily level
+
+```{r Fig1B,fig.width=12,fig.height=3.5}
+p35_rollup <- readRDS(file.path(system.file(package="REdiscoverTEpaper"), "Fig1_data", "p35_rollup_res.RDS"))
+p35_intron_rollup = p35_rollup[p35_rollup$index=="Index #2 (with Intron)",]
+rollup_count_plot(p35_intron_rollup) + labs(title="Simulated THCA sample: subfamily level") + theme(strip.text.y = element_blank())
+```
