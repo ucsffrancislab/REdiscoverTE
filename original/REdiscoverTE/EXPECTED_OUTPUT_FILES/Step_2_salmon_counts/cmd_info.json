@@ -1,0 +1,11 @@
+{
+    "salmon_version": "0.8.2",
+    "seqBias": [],
+    "gcBias": [],
+    "index": "Step_1_salmon_idx",
+    "libType": "A",
+    "mates1": "RSEM_SIMULATED_LAML_SAMPLE/input_R1.fq.gz",
+    "mates2": "RSEM_SIMULATED_LAML_SAMPLE/input_R2.fq.gz",
+    "output": "Step_2_salmon_counts",
+    "auxDir": "aux_info"
+}
