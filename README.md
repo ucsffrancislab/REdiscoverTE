@@ -2,6 +2,24 @@
 
 
 
+#	Create Salmon Index
+
+
+
+#	Align Samples to Salmon Index
+
+
+
+
+#	Rollup / Aggregate Alignments to RE repName
+
+
+
+
+
+#	Analyze Results with EdgeR
+
+
 
 
 
@@ -34,5 +52,13 @@ http://research-pub.gene.com/REdiscoverTEpaper/software/REdiscoverTE_1.0.1.tar.g
 These files were downloaded and retained in the original/ directory.
 They were untarred to minimize file size.
 
+
+```BASH
+gzip original/REdiscoverTE/EXPECTED_OUTPUT_FILES/Step_2_salmon_counts/quant.sf
+
+mkdir -p original/REdiscoverTE/rollup_annotation/REdiscoverTE_whole_transcriptome_hg38-20
+faSplit sequence original/REdiscoverTE/rollup_annotation/REdiscoverTE_whole_transcriptome_hg38.fa 20 original/REdiscoverTE/rollup_annotation/REdiscoverTE_whole_transcriptome_hg38-20/
+gzip original/REdiscoverTE/rollup_annotation/REdiscoverTE_whole_transcriptome_hg38-20/?.fa
+```
 
 
