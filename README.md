@@ -5,17 +5,49 @@
 #	Create Salmon Index
 
 
+```BASH
+zcat original/REdiscoverTE/rollup_annotation/REdiscoverTE_whole_transcriptome_hg38-20/*.fa.gz > genome.fasta
+
+salmon index \
+	-t genome.fasta \
+	--threads 64 \
+	-i REdiscoverTE
+```
 
 #	Align Samples to Salmon Index
 
+```BASH
+for f in ${SAMPLE_DIR}/???.fastq.gz ; do
 
+	echo $f
 
+	base=${f%.fastq.gz}
+	echo $base
+
+	salmon quant --seqBias --gcBias \
+		--index REdiscoverTE \
+		--libType A --unmatedReads ${f} \
+		--validateMappings \
+		-o ${base}.salmon.REdiscoverTE \
+		--threads 8
+
+done
+```
 
 #	Rollup / Aggregate Alignments to RE repName
 
+```BASH
+echo -e "sample\tquant_sf_path" > ${SAMPLE_DIR}/REdiscoverTE.tsv
+ls -1 ${SAMPLE_DIR}/*.sample.REdiscoverTE/quant.sf \
+		| awk -F/ '{split($8,a,".");print a[1]"\t"$0}' \
+		>> ${SAMPLE_DIR}/REdiscoverTE.tsv
 
-
-
+REdiscoverTE/rollup.R \
+		--metadata=${SAMPLE_DIR}/REdiscoverTE.tsv \
+		--datadir=REdiscoverTE/rollup_annotation/ \
+		--nozero --threads=64 --assembly=hg38 \
+		--outdir=${SAMPLE_DIR}/REdiscoverTE_rollup/
+```
 
 #	Analyze Results with EdgeR
 
