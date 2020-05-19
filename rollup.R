@@ -76,12 +76,14 @@ mandate <- function(condition, msg) {
 #' @param path: File path to read from.
 #' @param required_cols: Optional. For error checking. Columns to *require* in the input file. Exits with an error if these columns are not present.
 #' @return Returns the data that from the RDS (if an RDS is read), or a tibble (if a TSV is read).
+
 read_rds_or_table <- function(path, required_cols=c(), ...) {
-	# Filename ends in RDS, so try to 'readRDS'
 	if (grepl("[.]rds$", path, ignore.case=T, perl=T)) {
+		# Filename ends in RDS, so try to 'readRDS'
 		dat = readRDS(path, ...)
 	} else {
-		dat = readr::read_tsv(path, ...) # note: we expect a TAB-DELIMITED file
+		# note: we expect a TAB-DELIMITED file
+		dat = readr::read_tsv(path, ...)
 	}
 	stopifnot(all(required_cols %in% colnames(dat)))
 	return(dat)
@@ -92,6 +94,7 @@ read_rds_or_table <- function(path, required_cols=c(), ...) {
 #' Generates a three-column tibble from a 'quant.sf' file (which is the output of the aligner 'Salmon'). Note: this function is 'memoized'--it will only read the same filename from disk a single time. It then saves the results into GLOBAL_MEMOIZED_QUANT_SF_DATA.
 #' @param filename: The salmon quant.sf file. Also can be quant.sf.gz (or any other compressed format that 'readr' can handle).
 #' @return A tibble with the 'Name', 'TPM', and 'EffectiveLength' columns from the specified quant.sf. The "Length" and "EffectiveLength" columns are omitted.
+
 load_salmon_quant_sf <- function(filename) { # Can read a quant.sf file or a quant.sf.gz file.
 	mandate(is.character(filename) && grepl("[.]sf", filename, perl=T, ignore.case=T),
 		paste0(
@@ -190,9 +193,11 @@ make_gene_DGEList <- function(salmon_data, metadata_table, outdir) {
 #' @param dge_fileprefix: Prefix for the output RDS filename.
 #' @param outdir: The directory where we will write output files
 #' @return (None, but writes two RDS files to disk.)
+
 make_repetitive_element_DGEList <- function(salmon_data, metadata_table, repeat_names_map, dge_fileprefix, outdir) {
 	# DGEList of read counts mapped to repeats, no normalization
-	# Read in salmon quant.sf RE list. Length = number of samples, then each line is a list of length 3 (repName, repFamily, repClass)
+	# Read in salmon quant.sf RE list.
+	#	Length = number of samples, then each line is a list of length 3 (repName, repFamily, repClass)
 	res.list <- lapply(salmon_data, function(quant) { return(list("repNameNumReads"=quant[["repName"]][, "NumReads", drop=F], "repNameTPM"     =quant[["repName"]][,      "TPM", drop=F] ))  })
 	extract_data <- function(column_name) {
 		x <- do.call(cbind, lapply(res.list, '[[', column_name)) %>% `colnames<-`( metadata_table[[METADATA_SAMPLE_COLNAME]] )
@@ -216,6 +221,34 @@ make_repetitive_element_DGEList <- function(salmon_data, metadata_table, repeat_
 	dgelist_repName_TPM = DGEList(
 		counts=repName_TPM_keep, samples=metadata_table, genes=repNames.fdat, remove.zeros=opt$remove_zero)
 	saveRDS(dgelist_repName_TPM, file=file.path(outdir, paste0(dge_fileprefix, TPM_RDS_SUFFIX)))
+
+
+	res.list2 <- lapply(salmon_data, function(quant) { return(list("repFamilyNumReads"=quant[["repFamily"]][, "NumReads", drop=F], "repFamilyTPM"     =quant[["repFamily"]][,      "TPM", drop=F] ))  })
+	extract_data2 <- function(column_name) {
+		x <- do.call(cbind, lapply(res.list2, '[[', column_name)) %>% `colnames<-`( metadata_table[[METADATA_SAMPLE_COLNAME]] )
+		return(x)
+	}
+	repFamily_counts   = extract_data2("repFamilyNumReads")
+	repFamily_TPM      = extract_data2("repFamilyTPM")
+	stopifnot(identical(rownames(repFamily_counts), rownames(repFamily_TPM)))
+	repFamilys_to_keep.bool.vec <- (rownames(repFamily_counts) %in% repeat_names_map$repFamily)
+	repFamily_counts_keep       <- repFamily_counts[repFamilys_to_keep.bool.vec, , drop=F]
+	repFamily_TPM_keep          <-    repFamily_TPM[repFamilys_to_keep.bool.vec, , drop=F]
+	# repFamilys.fdat appears to be repName, repFamily, repClass for each entry
+	repFamilys.fdat             <- data.frame(
+		repeat_names_map[match(rownames(repFamily_counts_keep), repeat_names_map$repFamily), ])
+	stopifnot(colnames(repFamilys.fdat) == c("repName", "repFamily", "repClass"))
+	stopifnot(all.equal(repFamilys.fdat$repFamily, rownames(repFamily_counts_keep)))
+	stopifnot(all.equal(repFamilys.fdat$repFamily, rownames(repFamily_TPM_keep)))
+	dgelist_repFamily_counts = edgeR::DGEList(
+		counts=repFamily_counts_keep, samples=metadata_table, genes=repFamilys.fdat, remove.zeros=opt$remove_zero)
+	saveRDS(dgelist_repFamily_counts, file=file.path(outdir, paste0(dge_fileprefix, "_repFamily",RAW_COUNTS_RDS_SUFFIX)))
+	dgelist_repFamily_TPM = DGEList(
+		counts=repFamily_TPM_keep, samples=metadata_table, genes=repFamilys.fdat, remove.zeros=opt$remove_zero)
+	saveRDS(dgelist_repFamily_TPM, file=file.path(outdir, paste0(dge_fileprefix, "_repFamily",TPM_RDS_SUFFIX)))
+
+
+
 }
 
 #' make_repName_NormCountDGE_CPM
@@ -239,6 +272,20 @@ make_repName_NormCountDGE_CPM <- function(srcdir, destdir, input_sample_annotate
 		assayData=cpm_matrix, phenoData=input_sample_annotated_data_frame, featureData=AnnotatedDataFrame(dge$genes))
 	# <-- note the text 'genenorm' here, indicating that these REs are normalized by *gene* counts
 	saveRDS(dge, file=file.path(destdir, paste0(rds_fileprefix, NORM_COUNTS_RDS_SUFFIX)))
+
+
+
+	dge <- readRDS(file.path(srcdir, paste0(rds_fileprefix, "_repFamily", RAW_COUNTS_RDS_SUFFIX)))
+	# replace with the norm.factor and lib.size from gene DGE
+	# <-- replaces the RE's lib.sizes with the GENE LEVEL counts.
+	#		This is how we normalize the REs to gene-level totals instead of RE-level totals.
+	dge$samples       = as(input_sample_annotated_data_frame, 'data.frame')
+	cpm_matrix        = edgeR::cpm(dge, log=T, prior.count=opt$priorcount)
+	cpm_eset          = ExpressionSet(
+		assayData=cpm_matrix, phenoData=input_sample_annotated_data_frame, featureData=AnnotatedDataFrame(dge$genes))
+	# <-- note the text 'genenorm' here, indicating that these REs are normalized by *gene* counts
+	saveRDS(dge, file=file.path(destdir, paste0(rds_fileprefix, "_repFamily", NORM_COUNTS_RDS_SUFFIX)))
+
 }
 
 #' assert_metadata_tibble_is_ok
