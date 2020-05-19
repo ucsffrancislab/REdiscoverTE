@@ -198,9 +198,13 @@ make_repetitive_element_DGEList <- function(salmon_data, metadata_table, repeat_
 	# DGEList of read counts mapped to repeats, no normalization
 	# Read in salmon quant.sf RE list.
 	#	Length = number of samples, then each line is a list of length 3 (repName, repFamily, repClass)
-	res.list <- lapply(salmon_data, function(quant) { return(list("repNameNumReads"=quant[["repName"]][, "NumReads", drop=F], "repNameTPM"     =quant[["repName"]][,      "TPM", drop=F] ))  })
+	res.list <- lapply(salmon_data, function(quant) {
+		return(list(
+			"repNameNumReads"=quant[["repName"]][, "NumReads", drop=F],
+			"repNameTPM"     =quant[["repName"]][,      "TPM", drop=F] ))  })
 	extract_data <- function(column_name) {
-		x <- do.call(cbind, lapply(res.list, '[[', column_name)) %>% `colnames<-`( metadata_table[[METADATA_SAMPLE_COLNAME]] )
+		x <- do.call(cbind, lapply(
+			res.list, '[[', column_name)) %>% `colnames<-`( metadata_table[[METADATA_SAMPLE_COLNAME]] )
 		return(x)
 	}
 	repName_counts   = extract_data("repNameNumReads")
@@ -223,9 +227,13 @@ make_repetitive_element_DGEList <- function(salmon_data, metadata_table, repeat_
 	saveRDS(dgelist_repName_TPM, file=file.path(outdir, paste0(dge_fileprefix, TPM_RDS_SUFFIX)))
 
 
-	res.list2 <- lapply(salmon_data, function(quant) { return(list("repFamilyNumReads"=quant[["repFamily"]][, "NumReads", drop=F], "repFamilyTPM"     =quant[["repFamily"]][,      "TPM", drop=F] ))  })
+	res.list2 <- lapply(salmon_data, function(quant) {
+		return( list(
+				"repFamilyNumReads"=quant[["repFamily"]][, "NumReads", drop=F],
+				"repFamilyTPM"     =quant[["repFamily"]][,      "TPM", drop=F] ))  })
 	extract_data2 <- function(column_name) {
-		x <- do.call(cbind, lapply(res.list2, '[[', column_name)) %>% `colnames<-`( metadata_table[[METADATA_SAMPLE_COLNAME]] )
+		x <- do.call(cbind, lapply(
+			res.list2, '[[', column_name)) %>% `colnames<-`( metadata_table[[METADATA_SAMPLE_COLNAME]] )
 		return(x)
 	}
 	repFamily_counts   = extract_data2("repFamilyNumReads")
