@@ -10,8 +10,6 @@ write.csv(dat,"rmsk_annotation.csv",row.names=F)
 
 awk 'BEGIN{FPAT = "(\"([^\"]|\"\")*\")|([^,\"]*)"}($5 =="\"ERV1\""){print}' rmsk_annotation.csv > rmsk_annotation.ERV1.csv
 
-print $3,$6,
-
 awk 'BEGIN{OFS=",";FPAT = "(\"([^\"]|\"\")*\")|([^,\"]*)"}{
 gsub("\"","",$3)
 gsub("\"","",$6)
