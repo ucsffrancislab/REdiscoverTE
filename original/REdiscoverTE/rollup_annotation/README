@@ -5,7 +5,7 @@ Exported rmsk_annotation.csv from R
 
 R
 dat<-readRDS("rmsk_annotation.RDS")
-write.csv(dat,"rmsk_annotation.RDS",row.names=F)
+write.csv(dat,"rmsk_annotation.csv",row.names=F)
 
 
 awk 'BEGIN{FPAT = "(\"([^\"]|\"\")*\")|([^,\"]*)"}($5 =="\"ERV1\""){print}' rmsk_annotation.csv > rmsk_annotation.ERV1.csv
