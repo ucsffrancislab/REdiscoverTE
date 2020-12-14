@@ -1,0 +1,70 @@
+
+
+Exported rmsk_annotation.csv from R
+
+
+R
+dat<-readRDS("rmsk_annotation.RDS")
+write.csv(dat,"rmsk_annotation.RDS",row.names=F)
+
+
+awk 'BEGIN{FPAT = "(\"([^\"]|\"\")*\")|([^,\"]*)"}($5 =="\"ERV1\""){print}' rmsk_annotation.csv > rmsk_annotation.ERV1.csv
+
+print $3,$6,
+
+awk 'BEGIN{OFS=",";FPAT = "(\"([^\"]|\"\")*\")|([^,\"]*)"}{
+gsub("\"","",$3)
+gsub("\"","",$6)
+gsub("\"","",$7)
+split($7,pos,",")
+for( p in pos ){
+split(pos[p],x,"_")
+print $3,$6,x[1],x[3],x[4],x[4]-x[3]+1
+}
+}' rmsk_annotation.ERV1.csv > rmsk_annotation.ERV1.split.csv
+
+
+
+
+	Important.
+
+	Are these defined regions zero-based? If not, subtract 1 from start and end. Bed format is zero-based.
+
+	Are these defined regions from above inclusive? If so, add 1 to end position. Bed format is end exclusive.
+
+
+awk 'BEGIN{FS=",";OFS="\t"}{
+print $3,$4,$5+1,$1"-"$2
+}' rmsk_annotation.ERV1.split.csv > rmsk_annotation.ERV1.split.bed
+
+
+
+bedtools getfasta -fi /francislab/data1/refs/fasta/hg38.fa -bed rmsk_annotation.ERV1.split.bed -fo rmsk_annotation.ERV1.split.fasta
+
+
+Tool:    bedtools getfasta (aka fastaFromBed)
+Version: v2.29.2
+Summary: Extract DNA sequences from a fasta file based on feature coordinates.
+
+Usage:   bedtools getfasta [OPTIONS] -fi <fasta> -bed <bed/gff/vcf>
+
+Options: 
+	-fi		Input FASTA file
+	-fo		Output file (opt., default is STDOUT
+	-bed		BED/GFF/VCF file of ranges to extract from -fi
+	-name		Use the name field and coordinates for the FASTA header
+	-name+		(deprecated) Use the name field and coordinates for the FASTA header
+	-nameOnly	Use the name field for the FASTA header
+	-split		Given BED12 fmt., extract and concatenate the sequences
+			from the BED "blocks" (e.g., exons)
+	-tab		Write output in TAB delimited format.
+			- Default is FASTA format.
+	-s		Force strandedness. If the feature occupies the antisense,
+			strand, the sequence will be reverse complemented.
+			- By default, strand information is ignored.
+	-fullHeader	Use full fasta header.
+			- By default, only the word before the first space or tab 
+			is used.
+
+
+
