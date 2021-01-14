@@ -44,9 +44,13 @@ print n,f,x[1],x[3],x[4],x[4]-x[3]+1
 
 	Are these defined regions from above inclusive? If so, add 1 to end position. Bed format is end exclusive.
 
+print "chr"$3,$4,$5+1,$1"-"$2
+
+I don't think that I should have added 1 to the end position. The last base in each sequence is capitalized while the rest are all lowercase. Seems that should subtract 1 from start and end and then add 1 to end. Basically just subtract 1 from start
+
 
 awk 'BEGIN{FS=",";OFS="\t"}{
-print "chr"$3,$4,$5+1,$1"-"$2
+print "chr"$3,$4-1,$5,$1"-"$2
 }' rmsk_annotation.ERV1.split.csv > rmsk_annotation.ERV1.split.bed
 
 
@@ -57,6 +61,11 @@ bedtools getfasta -name+ -fi /francislab/data1/refs/fasta/hg38.fa -bed rmsk_anno
 Depending on the bedtools version, -name+ or -name
 
 
+liftOver rmsk_annotation.ERV1.split.bed /francislab/data1/refs/sources/hgdownload.cse.ucsc.edu/goldenPath/hg38/liftOver/hg38ToHg19.over.chain.gz rmsk_annotation.ERV1.split.hg19.bed unMapped
+
+
+
+cp rmsk_annotation.ERV1.split.bed rmsk_annotation.ERV1.split.hg38.bed
 
 
 BOX="https://dav.box.com/dav/Francis _Lab_Share/20201214 REdiscoverTE ERV1 sequences"
@@ -64,4 +73,7 @@ BOX="https://dav.box.com/dav/Francis _Lab_Share/20201214 REdiscoverTE ERV1 seque
 curl -netrc -X MKCOL "${BOX}/"
 
 curl -netrc -T rmsk_annotation.ERV1.split.fasta "${BOX}/"
+
+curl -netrc -T rmsk_annotation.ERV1.split.hg19.bed "${BOX}/"
+curl -netrc -T rmsk_annotation.ERV1.split.hg38.bed "${BOX}/"
 
