@@ -381,13 +381,8 @@ saveRDS(dgelist_gene_count_rle,
 message("JAKE :   08")
 message(dgelist_gene_count_rle)
 
-
-
-# calculate logCPM
-dgelist_gene_cpm       = edgeR::cpm(dgelist_gene_count_rle, log=T, prior.count=opt$priorcount)
-
-
-
+## calculate logCPM - Why? Isn't used later.
+#dgelist_gene_cpm       = edgeR::cpm(dgelist_gene_count_rle, log=T, prior.count=opt$priorcount)
 
 message("JAKE :   09")
 
