@@ -328,13 +328,13 @@ GLOBAL_MEMOIZED_QUANT_SF_DATA <- list() # Data structure used to 'memoize' (save
 ALL_RE_LEVELS           <- c("repName", "repFamily", "repClass") # Hierarchical categories of repetitive element classifiction, from most specific (repName) to most general (repClass). Must be in this order.
 METADATA_SAMPLE_COLNAME <- "sample"        # <-- usually the 1st column in the metadata.tsv. A human-readable sample identifier (e.g. 'TreatmentA').
 METADATA_QUANTSF_COL    <- "quant_sf_path" # <-- usually the 2nd column in the metadata.tsv. Should be full paths to each quant.sf file (e.g. /file/path/to/TreatmentA/quant.sf.gz).
-
 # Below: the main code is here, not encapsulated in a function.
 metadata <- readr::read_tsv(opt$metadata_tsv, col_names=TRUE, quote="", comment="") %>% rename_all(tolower) # (lower-case column names)
 assert_metadata_tibble_is_ok(metadata)
 mandate(dir.exists(opt$datadir),
 	paste0("Unable to find specified '--datadir' annotation directory: ",
 		opt$datadir, ". You should specify a valid --datadir=/DIRECTORY/PATH/ "))
+
 
 # Hard-coded file paths here
 GENE_ANNOT_TABLE             <- read_rds_or_table(file.path(opt$datadir, 'GENCODE.V26.Basic_Gene_Annotation_md5.RDS')  , required_cols=c("md5", "ensembl_ID", "symbol", "geneID")) %>% select(-matches("^n[.]genes$"))
@@ -353,7 +353,9 @@ quant_raw_list[["RE_exon"]]       = rollup_and_return(metadata[[METADATA_QUANTSF
 quant_raw_list[["RE_intron"]]     = rollup_and_return(metadata[[METADATA_QUANTSF_COL]], outdir=opt$outdir, sample_ids.vec=metadata[[METADATA_SAMPLE_COLNAME]], columns=ALL_RE_LEVELS, outname='RE_intron'    , dat.annot=RE_INTRON_ANNOT)
 quant_raw_list[["RE_intergenic"]] = rollup_and_return(metadata[[METADATA_QUANTSF_COL]], outdir=opt$outdir, sample_ids.vec=metadata[[METADATA_SAMPLE_COLNAME]], columns=ALL_RE_LEVELS, outname='RE_intergenic', dat.annot=RE_INTERGENIC_ANNOT)
 quant_raw_list[["GENE"]]          = rollup_and_return(metadata[[METADATA_QUANTSF_COL]], outdir=opt$outdir, sample_ids.vec=metadata[[METADATA_SAMPLE_COLNAME]], columns="ensembl_ID" , outname='GENE'         , dat.annot=GENE_ANNOT_TABLE)
+
 for (re_category in c("RE_all", "RE_exon", "RE_intergenic", "RE_intron")) {
+	message("re_category :",re_category)
 	# Saves two RDS files to disk for each category.
 	make_repetitive_element_DGEList(
 		salmon_data=quant_raw_list[[re_category]],
@@ -362,23 +364,44 @@ for (re_category in c("RE_all", "RE_exon", "RE_intergenic", "RE_intron")) {
 		dge_fileprefix=re_category,
 		outdir=opt$outdir)
 }
+
 gene_dgelists.list = make_gene_DGEList(
 	salmon_data=quant_raw_list[["GENE"]],
 	metadata_table=metadata,
 	outdir=opt$outdir)
+
 # Note: we calculate the normalization factors based on the GENES, not the REs.
 dgelist_gene_count_rle = edgeR::calcNormFactors(
 	gene_dgelists.list[["DGE_RAW"]], method="RLE")
+
 # Write the output normalized gene-level data
 saveRDS(dgelist_gene_count_rle,
 	file=file.path(opt$outdir, paste0("GENE", NORM_COUNTS_RDS_SUFFIX)))
+
+message("JAKE :   08")
+message(dgelist_gene_count_rle)
+
+
+
 # calculate logCPM
 dgelist_gene_cpm       = edgeR::cpm(dgelist_gene_count_rle, log=T, prior.count=opt$priorcount)
+
+
+
+
+message("JAKE :   09")
+
 # Used for normalization
 geneDGEsamples         = Biobase::AnnotatedDataFrame(dgelist_gene_count_rle$samples)
 
+
+message("JAKE :   10")
+
 for (fname in c("RE_all", "RE_intergenic", "RE_intron", "RE_exon")) {
 	# geneDDEsamples is gene-level count data that has been RLE-normalized
+
+	message("JAKE :   11 : fname :",fname)
+
 	make_repName_NormCountDGE_CPM(
 		srcdir=opt$outdir,
 		destdir=opt$outdir,
