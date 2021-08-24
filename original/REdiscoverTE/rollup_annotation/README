@@ -1,0 +1,79 @@
+
+
+Exported rmsk_annotation.csv from R
+
+
+R
+dat<-readRDS("rmsk_annotation.RDS")
+write.csv(dat,"rmsk_annotation.csv",row.names=F)
+
+
+
+"md5","n.loci","repName","repClass","repFamily","selected_feature","idx"
+
+
+"7c246098930ba3a99be2d7be896ecb61",2,"MER101-int,MER65-int","LTR","ERV1","intron","X__52684341_52684555,X__52773889_52774103"
+"e9d8667c3a6900601e14f23547183f7c",2,"MER101-int,MER65-int","LTR","ERV1","intergenic","21__5062099_5062288,21__44201382_44201571"
+"fb8b890abe23b6b249f9aecadb9e95a3",2,"MER101-int,MER65-int","LTR","ERV1","intergenic","21__5061678_5061796,21__44201874_44201992"
+
+
+
+awk 'BEGIN{FPAT = "(\"([^\"]|\"\")*\")|([^,\"]*)"}($5 =="\"ERV1\""){print}' rmsk_annotation.csv > rmsk_annotation.ERV1.csv
+
+awk 'BEGIN{OFS=",";FPAT = "(\"([^\"]|\"\")*\")|([^,\"]*)"}{
+n=$3
+f=$6
+l=$7
+gsub("\"","",n)
+gsub(",","_",n)
+gsub("\"","",f)
+gsub("\"","",l)
+split(l,pos,",")
+for( p in pos ){
+split(pos[p],x,"_")
+print n,f,x[1],x[3],x[4],x[4]-x[3]+1
+}
+}' rmsk_annotation.ERV1.csv > rmsk_annotation.ERV1.split.csv
+
+
+
+
+	Important.
+
+	Are these defined regions zero-based? If not, subtract 1 from start and end. Bed format is zero-based.
+
+	Are these defined regions from above inclusive? If so, add 1 to end position. Bed format is end exclusive.
+
+print "chr"$3,$4,$5+1,$1"-"$2
+
+I don't think that I should have added 1 to the end position. The last base in each sequence is capitalized while the rest are all lowercase. Seems that should subtract 1 from start and end and then add 1 to end. Basically just subtract 1 from start
+
+
+awk 'BEGIN{FS=",";OFS="\t"}{
+print "chr"$3,$4-1,$5,$1"-"$2
+}' rmsk_annotation.ERV1.split.csv > rmsk_annotation.ERV1.split.bed
+
+
+
+bedtools getfasta -name+ -fi /francislab/data1/refs/fasta/hg38.fa -bed rmsk_annotation.ERV1.split.bed -fo rmsk_annotation.ERV1.split.fasta
+
+
+Depending on the bedtools version, -name+ or -name
+
+
+liftOver rmsk_annotation.ERV1.split.bed /francislab/data1/refs/sources/hgdownload.cse.ucsc.edu/goldenPath/hg38/liftOver/hg38ToHg19.over.chain.gz rmsk_annotation.ERV1.split.hg19.bed unMapped
+
+
+
+cp rmsk_annotation.ERV1.split.bed rmsk_annotation.ERV1.split.hg38.bed
+
+
+BOX="https://dav.box.com/dav/Francis _Lab_Share/20201214 REdiscoverTE ERV1 sequences"
+
+curl -netrc -X MKCOL "${BOX}/"
+
+curl -netrc -T rmsk_annotation.ERV1.split.fasta "${BOX}/"
+
+curl -netrc -T rmsk_annotation.ERV1.split.hg19.bed "${BOX}/"
+curl -netrc -T rmsk_annotation.ERV1.split.hg38.bed "${BOX}/"
+
