@@ -270,27 +270,40 @@ make_repName_NormCountDGE_CPM <- function(srcdir, destdir, input_sample_annotate
 	# Calculates CPM for repetitive elements. Note: the denominator is NOT THE TOTAL of *RE* counts---it's the total of GENE counts instead.
 	# This is because we replace the dge$samples for the REs with the data from the genes.
 	# Here, we scan for specific for hard-coded filepaths with a certain format, e.g. 'RE_intergenic_repName_logCPM_rle_normed_eset.RDS'
+
 	dge <- readRDS(file.path(srcdir, paste0(rds_fileprefix, RAW_COUNTS_RDS_SUFFIX)))
 	# replace with the norm.factor and lib.size from gene DGE
 	# <-- replaces the RE's lib.sizes with the GENE LEVEL counts.
 	#		This is how we normalize the REs to gene-level totals instead of RE-level totals.
 	dge$samples       = as(input_sample_annotated_data_frame, 'data.frame')
+	message("dge$samples")
+	#message(dge$samples)
 	cpm_matrix        = edgeR::cpm(dge, log=T, prior.count=opt$priorcount)
+	message("cpm_matrix")
+	#message(cpm_matrix)
 	cpm_eset          = ExpressionSet(
 		assayData=cpm_matrix, phenoData=input_sample_annotated_data_frame, featureData=AnnotatedDataFrame(dge$genes))
+	#message("cpm_eset")
+	#message(cpm_eset)
 	# <-- note the text 'genenorm' here, indicating that these REs are normalized by *gene* counts
 	saveRDS(dge, file=file.path(destdir, paste0(rds_fileprefix, NORM_COUNTS_RDS_SUFFIX)))
 
-
+	message("_repFamily")
 
 	dge <- readRDS(file.path(srcdir, paste0(rds_fileprefix, "_repFamily", RAW_COUNTS_RDS_SUFFIX)))
 	# replace with the norm.factor and lib.size from gene DGE
 	# <-- replaces the RE's lib.sizes with the GENE LEVEL counts.
 	#		This is how we normalize the REs to gene-level totals instead of RE-level totals.
 	dge$samples       = as(input_sample_annotated_data_frame, 'data.frame')
+	message("dge$samples")
+	#message(dge$samples)
 	cpm_matrix        = edgeR::cpm(dge, log=T, prior.count=opt$priorcount)
+	message("cpm_matrix")
+	#message(cpm_matrix)
 	cpm_eset          = ExpressionSet(
 		assayData=cpm_matrix, phenoData=input_sample_annotated_data_frame, featureData=AnnotatedDataFrame(dge$genes))
+	#message("cpm_eset")
+	#message(cpm_eset)
 	# <-- note the text 'genenorm' here, indicating that these REs are normalized by *gene* counts
 	saveRDS(dge, file=file.path(destdir, paste0(rds_fileprefix, "_repFamily", NORM_COUNTS_RDS_SUFFIX)))
 
@@ -389,8 +402,8 @@ message("JAKE :   09")
 # Used for normalization
 geneDGEsamples         = Biobase::AnnotatedDataFrame(dgelist_gene_count_rle$samples)
 
-
 message("JAKE :   10")
+#message("JAKE :   10 : ",geneDGEsamples)
 
 for (fname in c("RE_all", "RE_intergenic", "RE_intron", "RE_exon")) {
 	# geneDDEsamples is gene-level count data that has been RLE-normalized
