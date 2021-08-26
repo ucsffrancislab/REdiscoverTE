@@ -70,6 +70,7 @@ mandate <- function(condition, msg) {
 	if (!is.null(condition) && !condition) { warning(msg); stop(msg); } 
 }
 
+
 #' read_rds_or_table
 #'
 #' Reads a file that can be in either .RDS (R data) format or tab-delimited format (.tsv).
@@ -88,6 +89,7 @@ read_rds_or_table <- function(path, required_cols=c(), ...) {
 	stopifnot(all(required_cols %in% colnames(dat)))
 	return(dat)
 }
+
 
 #' load_salmon_quant_sf
 #'
@@ -123,6 +125,7 @@ load_salmon_quant_sf <- function(filename) { # Can read a quant.sf file or a qua
 	return(qsf.tib) # <-- 3-column tibble (Name, TPM, NumReads). We discard 'Length' and 'EffectiveLength'.
 }
 
+
 #' rollup_and_return
 #'
 #' This is the main component of RollUp: it runs (in parallel, using 'mclapply') Rollup on data loaded from various quant.sf files, and saves the output to an RDS.
@@ -133,6 +136,7 @@ load_salmon_quant_sf <- function(filename) { # Can read a quant.sf file or a qua
 #' @param outname: Used as a prefix when generating an output filename.
 #' @param dat.annot: An annotation object, usually a tibble or data frame, with information such as the repetitive element category for for each ID in each quant.sf file.
 #' @return (none, but writes an RDS as a side effect)
+
 rollup_and_return <- function(filepaths.vec, outdir, sample_ids.vec, columns, outname, dat.annot) {
 	stopifnot(is.character(filepaths.vec))
 	stopifnot(is.character(sample_ids.vec))
@@ -157,6 +161,7 @@ rollup_and_return <- function(filepaths.vec, outdir, sample_ids.vec, columns, ou
 	return(qsf_list) # Combined version of the single quant.sf files
 }
 
+
 #' make_gene_DGEList
 #'
 #' Saves a DGEList to disk as a .RDS file, when given a path to a rolled-up RDS file. This function is for genes. Repetitive elements use a very similar function (below) named 'make_repetitive_element_DGEList'.
@@ -165,6 +170,7 @@ rollup_and_return <- function(filepaths.vec, outdir, sample_ids.vec, columns, ou
 #' @param fileprefix: Prefix for the output RDS filename.
 #' @param outdir: The directory where we will write output files.
 #' @return (The 'raw counts' and 'TPM' DGELists, in a list, and writes two RDS files as a side effect)
+
 make_gene_DGEList <- function(salmon_data, metadata_table, outdir) {
 	# DGEList of read counts mapped to genes (exonic and intronic). Not noramlized.
 	# Part 1: obtain 'NumReads' column from the Salmon data.
@@ -183,6 +189,7 @@ make_gene_DGEList <- function(salmon_data, metadata_table, outdir) {
 
 	return(list("DGE_RAW"=dgelist_counts, "DGE_TPM"=dgelist_tpm))
 }
+
 
 #' make_repetitive_element_DGEList
 #'
@@ -254,10 +261,8 @@ make_repetitive_element_DGEList <- function(salmon_data, metadata_table, repeat_
 	dgelist_repFamily_TPM = DGEList(
 		counts=repFamily_TPM_keep, samples=metadata_table, genes=repFamilys.fdat, remove.zeros=opt$remove_zero)
 	saveRDS(dgelist_repFamily_TPM, file=file.path(outdir, paste0(dge_fileprefix, "_repFamily",TPM_RDS_SUFFIX)))
-
-
-
 }
+
 
 #' make_repName_NormCountDGE_CPM
 #'
@@ -266,6 +271,7 @@ make_repetitive_element_DGEList <- function(salmon_data, metadata_table, repeat_
 #' @param input_sample_annotated_data_frame: DGEList 'sample' data from an AnnotatedDataFrame.
 #' @param rds_fileprefix: Prefix for the output RDS files.
 #' @return (None, but saves two RDS files to disk.)
+
 make_repName_NormCountDGE_CPM <- function(srcdir, destdir, input_sample_annotated_data_frame, rds_fileprefix) {
 	# Calculates CPM for repetitive elements. Note: the denominator is NOT THE TOTAL of *RE* counts---it's the total of GENE counts instead.
 	# This is because we replace the dge$samples for the REs with the data from the genes.
@@ -276,44 +282,33 @@ make_repName_NormCountDGE_CPM <- function(srcdir, destdir, input_sample_annotate
 	# <-- replaces the RE's lib.sizes with the GENE LEVEL counts.
 	#		This is how we normalize the REs to gene-level totals instead of RE-level totals.
 	dge$samples       = as(input_sample_annotated_data_frame, 'data.frame')
-	message("dge$samples")
-	#message(dge$samples)
+
 	cpm_matrix        = edgeR::cpm(dge, log=T, prior.count=opt$priorcount)
-	message("cpm_matrix")
-	#message(cpm_matrix)
 	cpm_eset          = ExpressionSet(
 		assayData=cpm_matrix, phenoData=input_sample_annotated_data_frame, featureData=AnnotatedDataFrame(dge$genes))
-	#message("cpm_eset")
-	#message(cpm_eset)
 	# <-- note the text 'genenorm' here, indicating that these REs are normalized by *gene* counts
 	saveRDS(dge, file=file.path(destdir, paste0(rds_fileprefix, NORM_COUNTS_RDS_SUFFIX)))
 
 	message("_repFamily")
-
 	dge <- readRDS(file.path(srcdir, paste0(rds_fileprefix, "_repFamily", RAW_COUNTS_RDS_SUFFIX)))
 	# replace with the norm.factor and lib.size from gene DGE
 	# <-- replaces the RE's lib.sizes with the GENE LEVEL counts.
 	#		This is how we normalize the REs to gene-level totals instead of RE-level totals.
 	dge$samples       = as(input_sample_annotated_data_frame, 'data.frame')
-	message("dge$samples")
-	#message(dge$samples)
 	cpm_matrix        = edgeR::cpm(dge, log=T, prior.count=opt$priorcount)
-	message("cpm_matrix")
-	#message(cpm_matrix)
 	cpm_eset          = ExpressionSet(
 		assayData=cpm_matrix, phenoData=input_sample_annotated_data_frame, featureData=AnnotatedDataFrame(dge$genes))
-	#message("cpm_eset")
-	#message(cpm_eset)
 	# <-- note the text 'genenorm' here, indicating that these REs are normalized by *gene* counts
 	saveRDS(dge, file=file.path(destdir, paste0(rds_fileprefix, "_repFamily", NORM_COUNTS_RDS_SUFFIX)))
-
 }
+
 
 #' assert_metadata_tibble_is_ok
 #'
 #' Checking for a few common ways that a Metadata file can be malformed. Exits if the metadata that was loaded in does not appear to be OK.
 #' @param meta_tib: a tibble that was read in from the metadata file that specifies all the sample names (usually column 1) and paths to their corresponding quant.sf files (usually column 2).
 #' @return (None, but terminates the program if the metadata file does not look OK
+
 assert_metadata_tibble_is_ok <- function(meta_tib) {
 	mandate(METADATA_QUANTSF_COL %in% colnames(meta_tib),
 		paste0("ERROR: Input metadata file (", opt$metadata_tsv, ") was malformed; it needs a path in a column with this name: ", METADATA_QUANTSF_COL, ". But the only column names we found were: ",
@@ -383,32 +378,70 @@ gene_dgelists.list = make_gene_DGEList(
 	metadata_table=metadata,
 	outdir=opt$outdir)
 
+message("Normalizing")
+
 # Note: we calculate the normalization factors based on the GENES, not the REs.
 dgelist_gene_count_rle = edgeR::calcNormFactors(
 	gene_dgelists.list[["DGE_RAW"]], method="RLE")
+
+#	If there are too many zeros (I think), norm.factors are all NA.
+#	This will cause a crash later when running cpm.
+if ( any(is.na(dgelist_gene_count_rle$samples$norm.factors)) ){
+	message("RLE Normalization returned some NAs. Trying TMM.")
+	dgelist_gene_count_rle = edgeR::calcNormFactors(
+		gene_dgelists.list[["DGE_RAW"]], method="TMM")
+} else {
+	message("RLE Normalization worked.")
+}
+if ( any(is.na(dgelist_gene_count_rle$samples$norm.factors)) ){
+	message("TMM Normalization returned some NAs. Trying TMMwsp.")
+	dgelist_gene_count_rle = edgeR::calcNormFactors(
+		gene_dgelists.list[["DGE_RAW"]], method="TMMwsp")
+} else {
+	message("TMM Normalization worked.")
+}
+if ( any(is.na(dgelist_gene_count_rle$samples$norm.factors)) ){
+	message("TMMwsp Normalization returned some NAs. Trying upperquartile")
+	dgelist_gene_count_rle = edgeR::calcNormFactors(
+		gene_dgelists.list[["DGE_RAW"]], method="upperquartile")
+} else {
+	message("TMMwsp Normalization worked.")
+}
+if ( any(is.na(dgelist_gene_count_rle$samples$norm.factors)) ){
+	message("upperquartile Normalization returned some NAs. Trying none")
+	dgelist_gene_count_rle = edgeR::calcNormFactors(
+		gene_dgelists.list[["DGE_RAW"]], method="none")
+} else {
+	message("upperquartile Normalization worked.")
+}
+
+message("Saving dgelist_gene_count_rle")
 
 # Write the output normalized gene-level data
 saveRDS(dgelist_gene_count_rle,
 	file=file.path(opt$outdir, paste0("GENE", NORM_COUNTS_RDS_SUFFIX)))
 
-message("JAKE :   08")
-message(dgelist_gene_count_rle)
+message("Calculating logCPM")
+
+#message(dgelist_gene_count_rle)
+# Don't try to print dgelist_gene_count_rle
+#Error: C stack usage  15729277 is too close to the limit
+#Execution halted
 
 ## calculate logCPM - Why? Isn't used later.
-#dgelist_gene_cpm       = edgeR::cpm(dgelist_gene_count_rle, log=T, prior.count=opt$priorcount)
+dgelist_gene_cpm       = edgeR::cpm(dgelist_gene_count_rle, log=T, prior.count=opt$priorcount)
 
-message("JAKE :   09")
+message("Creating AnnotatedDataFrame")
 
 # Used for normalization
 geneDGEsamples         = Biobase::AnnotatedDataFrame(dgelist_gene_count_rle$samples)
 
-message("JAKE :   10")
-#message("JAKE :   10 : ",geneDGEsamples)
+message("Looping over fnames")
 
 for (fname in c("RE_all", "RE_intergenic", "RE_intron", "RE_exon")) {
 	# geneDDEsamples is gene-level count data that has been RLE-normalized
 
-	message("JAKE :   11 : fname :",fname)
+	message("fname :",fname)
 
 	make_repName_NormCountDGE_CPM(
 		srcdir=opt$outdir,
@@ -416,4 +449,6 @@ for (fname in c("RE_all", "RE_intergenic", "RE_intron", "RE_exon")) {
 		input_sample_annotated_data_frame=geneDGEsamples,
 		rds_fileprefix=fname)
 }
+
 message("[DONE]")
+
