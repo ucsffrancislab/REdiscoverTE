@@ -63,6 +63,72 @@ REdiscoverTE/rollup.R \
 
 
 
+
+
+
+
+
+
+
+
+
+
+#	View TCGA matrix
+
+
+```
+dat <- readRDS("original/REdiscoverTEdata/inst/Fig4_data/eset_TCGA_TE_intergenic_logCPM.RDS")
+head(dat)
+
+ExpressionSet (storageMode: lockedEnvironment)
+assayData: 6 features, 7353 samples 
+  element names: exprs 
+protocolData: none
+phenoData
+  sampleNames: TCGA-OR-A5KX-01A-11R-A29S-07
+    TCGA-EJ-7784-01A-11R-2118-07 ... TCGA-CV-7416-01A-11R-2081-07 (7353
+    total)
+  varLabels: indication patient_ID ... paired (5 total)
+  varMetadata: labelDescription
+featureData
+  featureNames: 7SK 7SLRNA ... AluJb (6 total)
+  fvarLabels: repName repClass repFam
+  fvarMetadata: labelDescription
+experimentData: use 'experimentData(object)'
+Annotation:  
+
+> as.data.frame(dat)[1:3,1:3]
+                                  X7SK    X7SLRNA      ACRO1
+TCGA-OR-A5KX-01A-11R-A29S-07 -1.386203 -0.7561825  2.2834249
+TCGA-EJ-7784-01A-11R-2118-07 -2.439085 -0.2542860 -0.2175945
+TCGA-BW-A5NQ-01A-11R-A27V-07 -3.079350 -1.3472844 -1.5813776
+
+#	I don't think that R data frame column names can begin with a number.
+
+
+> dim(as.data.frame(dat))
+[1] 7353 1209
+
+#	7353 subjects
+#	~1209 RE/TE counts
+
+> fData(dat)[1:5,]
+            repName  repClass repFam
+7SK             7SK       RNA    RNA
+7SLRNA       7SLRNA    srpRNA srpRNA
+ACRO1         ACRO1 Satellite   acro
+ALR/Alpha ALR/Alpha Satellite  centr
+Alu             Alu      SINE    Alu
+
+#	Perhaps the rows that begin with numbers should have an X added as well?
+
+```
+
+
+
+
+
+
 #	References
 
 This software was initially from https://www.nature.com/articles/s41467-019-13035-2
