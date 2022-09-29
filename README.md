@@ -1,5 +1,12 @@
 #	REdiscoverTE
 
+IMPORTANT. THIS IS NOT MY SOFTWARE.
+
+IT IS IMPORTED (and modified) FROM NON-GITHUB SOURCES.
+
+https://www.nature.com/articles/s41467-019-13035-2
+
+http://research-pub.gene.com/REdiscoverTEpaper/
 
 
 #	Create Salmon Index
