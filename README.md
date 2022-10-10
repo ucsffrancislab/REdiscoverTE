@@ -9,6 +9,21 @@ https://www.nature.com/articles/s41467-019-13035-2
 http://research-pub.gene.com/REdiscoverTEpaper/
 
 
+```
+module load r
+R
+```
+
+```R
+if (!require("BiocManager", quietly = TRUE))
+    install.packages("BiocManager")
+BiocManager::install(version = "3.15")
+
+BiocManager::install(c('tibble','readr','dplyr','Biobase','edgeR','parallel','EDASeq','ggplot2','RColorBrewer','pheatmap','gridExtra','grid','gtable','RColorBrewer','biomaRt'))
+
+```
+
+
 #	Create Salmon Index
 
 
