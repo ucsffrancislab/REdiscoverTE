@@ -1,0 +1,73 @@
+
+BASE_DIR     = ${HOME}/.local
+BASE_BIN_DIR = ${BASE_DIR}/bin
+
+#	All scripts will be installed in this subdir
+#	and linked from the parent. This will allow 
+#	for the uninstallation of everything!
+APPS_SUBDIR  = ucsffrancislab_PhIP-Seq
+
+#	mkdir will raise error if dir exists
+#	mkdir -p will not and would create full path
+MKDIR        = mkdir -p
+
+
+TARGETS = 
+
+
+#	the @ prefix means the line will be executed, but not printed
+
+#	Do I need the &&s?  Why not just multiple lines?
+#	The &&s are a condition so if the first part fails, the next will NOT run.
+#	Each line is its own thing so if a cd is used, needs to be same line.
+
+all: make-all $(TARGETS)
+	@printf "\nDONE MAKING ALL\n\n"
+
+make-all:
+	@printf "\nMAKING ALL\n\n"
+
+install: install-all $(TARGETS:%=install-%) install-scripts
+	@printf "\nDONE INSTALLING ALL\n\n"
+	@printf "Add  $(BASE_BIN_DIR) TO YOUR PATH\n\n"
+
+install-all:
+	@printf "\nINSTALLING ALL\n\n"
+	$(MKDIR) $(BASE_BIN_DIR)/$(APPS_SUBDIR)
+
+
+uninstall: uninstall-scripts
+
+uninstall-scripts:
+	@printf "\nUNINSTALLING SCRIPTS\n\n"
+	cd $(BASE_BIN_DIR); \
+		find . -lname $(APPS_SUBDIR)/\* -exec rm {} \;
+	rm -rf $(BASE_BIN_DIR)/$(APPS_SUBDIR)
+
+#	Remove old stuff.  Need -f or get an error.
+install-scripts: uninstall-scripts
+	$(MKDIR) $(BASE_BIN_DIR)/$(APPS_SUBDIR)
+	@printf "\nINSTALLING SCRIPTS\n\n"
+
+	#	As the scripts dir contains other dirs which won't copy,
+	#	we need to suppress the error by returning true or make will quit.
+	cp scripts/* $(BASE_BIN_DIR)/$(APPS_SUBDIR)/ || :
+
+	cd $(BASE_BIN_DIR); \
+	for file in `find $(APPS_SUBDIR) -type f` ; do \
+		echo $$file; \
+		ln -s $$file; \
+	done
+
+
+clean: clean-all $(TARGETS:%=clean-%)
+	@printf "\nDONE CLEANING\n\n"
+
+clean-all:
+	@printf "\nCLEANING ALL\n\n"
+
+
+
+test:
+	@printf "\ntesting is nice, but not today\n\n"
+
