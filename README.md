@@ -160,6 +160,15 @@ split -d -b 20MB quant.sf quant.sf.
 git add quant.sf.??
 ```
 
+Also
+
+```
+cd original/REdiscoverTE/rollup_annotation
+split -d -b 20MB rmsk_annotation.RDS rmsk_annotation.RDS.
+git add rmsk_annotation.RDS.??
+```
+
+
 
 
 
