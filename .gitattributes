@@ -1,2 +1,0 @@
-#original/REdiscoverTE/EXPECTED_OUTPUT_FILES/Step_2_salmon_counts/quant.sf.gz filter=lfs diff=lfs merge=lfs -text
-original/REdiscoverTE/rollup_annotation/rmsk_annotation.RDS filter=lfs diff=lfs merge=lfs -text
