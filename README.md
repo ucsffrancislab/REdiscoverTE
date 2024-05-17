@@ -148,6 +148,20 @@ Alu             Alu      SINE    Alu
 
 
 
+##	20240516
+
+Getting rid of LFS (large files)
+
+
+Not sure if this file is ever used, but if it is just concat the pieces.
+```
+cd original/REdiscoverTE/EXPECTED_OUTPUT_FILES/Step_2_salmon_counts/
+split -d -b 20MB quant.sf quant.sf.
+git add quant.sf.??
+```
+
+
+
 
 
 
