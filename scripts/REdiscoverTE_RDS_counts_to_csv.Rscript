@@ -1,0 +1,17 @@
+#!/usr/bin/env Rscript
+
+library("optparse")
+ 
+opt = parse_args(
+	OptionParser(option_list=list(
+		make_option(c("-s", "--sep"), type="character", default="\t", 
+			help="output separator", metavar="character")
+		)
+	), positional_arguments = TRUE)
+
+for( file in opt$args ){
+	print(paste0("Processing ",file))
+	g = readRDS(file)
+	g = g$counts
+	write.table(g, file = paste0(file,'.csv'), row.names=TRUE, sep=opt$options$sep, col.names = NA, quote=FALSE)
+}

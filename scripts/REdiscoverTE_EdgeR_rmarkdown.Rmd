@@ -1,0 +1,803 @@
+
+---
+title: REdiscoverTE EdgeR Template
+author: Geno/Jake
+date: 20230803
+output: 
+  html_document:
+    toc: true # table of content true
+    toc_depth: 3  # upto three depths of headings (specified by #, ## and ###)
+    number_sections: true  ## if you want number sections at each table header
+    theme: united  # many options for theme, this one is my favorite.
+    highlight: tango
+---
+
+# Load libraries and read data {.tabset .tabset-fade .tabset-pills}
+
+##	Load
+
+<!--
+
+THAT MUST BE FIRST TO BE USEFUL!
+
+-->
+
+```{r "Figure Settings", include = FALSE}
+knitr::opts_chunk$set(fig.width=12, fig.height=8) 
+```
+
+
+
+
+
+
+<!--
+
+This is a comment that will only be rendered as an html comment.
+
+Not sure what happens if output is a pdf document.
+
+-->
+
+```{r "Comment note", include = FALSE}
+#	This is r code that isn't included, ie printed.
+#	As it is comment, it isn't run.
+#	I think this is the most straight forward way to include comments in an rmarkdown file.
+```
+
+
+```{r "Show Args"}
+#args = commandArgs(trailingOnly=TRUE)
+print(args)
+```
+
+
+```{r}
+# test if there are the correct number of arguments: if not, return an error
+if (length(args)!=11) {
+	print(length(args))
+	stop(print("11 arguments need to be provided, in this order 
+		\n 1. path to data 
+		\n 2. cov file 
+		\n 3. path to output directory ( for saved plots, not used now )
+		\n 4. column name in cov file
+		\n 5. group col name in cov file 
+		\n 6. covariates (column names) in format like c('Age', 'Sex', 'race') or NA
+		\n 7. covariate filetypes in format like c(numeric, factor, factor) or NA
+		\n 8. Number (1-10) indicating which REdiscover file to use
+		\n 9. Alpha threshold
+		\n 10. logFC threshold
+		\n 11. date (and any prefix you want on the output file)"), call.=FALSE)
+}
+```
+
+
+```{r, include = FALSE}
+# PATH/TO/REDISCOVERTE/DATA
+data_dir = args[1] 
+# PATH/TO/COV/FILE/cov.txt
+cov_file = args[2]
+# PATH/TO/OUTDIR
+out_dir = args[3]
+
+#dir.create(out_dir, recursive = TRUE)
+
+# Column name in Covfile of the sample names 
+case_ID_col = args[4]
+# Column name in Covfile to split groups by
+group_col = args[5]
+# Comma-separated list of covariates to adjust for, e.g. c("Age","sex","race")
+covs = args[6]
+# Comma-separated list with the equal length to covs, indicating data types, e.g. c(numeric, factor, factor)
+cov_types = args[7]
+# NUMBER indicating the prefix of the REdiscover file you want to analyze, e.g. 6 (which corresponds to RE_all_repFamily)
+filetype = as.numeric(args[8])
+# Alpha threshold for signficant results (p value threshold), the smaller the less amount of results will print out (values like 0.05 or 0.01)
+alpha_thresh = args[9]
+# log Fold Change thresh (x in 2^x for actual fold change).  Normal values are around ~ 0.25, 0.5, 1, 2. The smaller the more results will print out
+logFC_thresh = args[10]
+# The date, will be used in the output file 
+date = args[11]
+
+#	BiocManager::install()
+
+library('readr')
+library('edgeR')
+library('EDASeq')
+library('ggplot2')
+library('RColorBrewer')
+library('pheatmap')
+library('gridExtra')
+library('grid') # New 20220712
+library('gtable') # New 20220712
+library('RColorBrewer')
+library('biomaRt')
+library('dplyr')
+#library('DESeq2')	#	needed for plotPCA?
+#library('BiocGenerics')	#	needed for plotPCA?
+#library('ggfortify')	#	new for new plotPCA style?
+library('kableExtra')
+library('ggrepel')
+
+options(max.print=1000000)
+```
+
+
+##	Read data
+
+```{r}
+filetypes <- c("GENE", "RE_intron", "RE_exon", "RE_intergenic", "RE_all", "RE_all_repFamily", "RE_intron_repFamily", "RE_exon_repFamily", "RE_intergenic_repFamily", "")
+datatypes <-c("_1_raw_counts", "")
+user_filename <-""
+#case_ID_col="RE_names"
+datatype=1
+
+# Read in the data 
+filename <- paste(data_dir, "/",user_filename, filetypes[filetype], datatypes[datatype],".RDS", sep ="")
+#	message("filename")
+#	message(filename)
+
+RE_disc = readRDS(filename)
+#	message("RE_disc")
+#	head(RE_disc)
+#	message(RE_disc)
+```
+
+
+```{r "Convert Ensemble Gene Ids to HGNC Symbols", include = FALSE}
+if( filetypes[filetype] == "GENE" ){
+#	RE_disc = readRDS("rollup/rollup.merged/GENE_1_raw_counts.RDS")
+	um=useMart("ensembl")
+	mart <- useDataset("hsapiens_gene_ensembl", um)
+
+	#	Too many useDataset requests at the same time?
+	#Quitting from lines 128-133 (REdiscoverTE_EdgeR_rmarkdown.Rmd) 
+	#Error in bmRequest(request = request, httr_config = httr_config, verbose = verbose) : 
+	#Gateway Timeout (HTTP 504).
+	#Calls: <Anonymous> ... .useMart -> .listMarts -> bmRequest -> stop_for_status
+	#Execution halted
+
+
+	#	without cache clear ...
+	#Quitting from lines 128-224 (REdiscoverTE_EdgeR_rmarkdown.Rmd) 
+	#Error in .readFromCache(bfc, hash) : Multiple cache results found.
+	#Please clear your cache by running biomartCacheClear()
+	#Calls: <Anonymous> ... eval_with_user_handlers -> eval -> eval -> getBM -> .readFromCache
+
+	#	biomartCacheClear()
+
+	#	with cache clear ...
+	#Quitting from lines 128-231 (REdiscoverTE_EdgeR_rmarkdown.Rmd) 
+	#Error in bmRequest(request = request, httr_config = httr_config, verbose = verbose) : 
+	#  Gateway Timeout (HTTP 504).
+	#Calls: <Anonymous> ... checkDataset -> .listDatasets -> bmRequest -> stop_for_status
+
+
+	#	Stop using cache in next step fixes cache problems
+
+
+	ensembl_gene_id=rownames(RE_disc$counts)
+	ensembl_gene_id=as.data.frame(ensembl_gene_id)
+	conversion_table <- getBM(filters = "ensembl_gene_id",attributes = c("ensembl_gene_id","hgnc_symbol"),
+		values = ensembl_gene_id$ensembl_gene_id, mart = mart, useCache = FALSE)
+
+	#	With multiple instances running at the same time, caching is an issue, so stop using it.
+	#		values = ensembl_gene_id$ensembl_gene_id, mart = mart)
+
+
+##	Not all are found. Sometimes return nothing. Sometimes return "<NA>". Sometimes returns duplicates?
+##           
+## > conversion_table[duplicated(conversion_table),]
+##       ensembl_gene_id hgnc_symbol
+## 9482  ENSG00000132207       SLX1A
+## 14218 ENSG00000172058      SERF1A
+## 14219 ENSG00000172062        SMN1
+## 14220 ENSG00000173678     SPDYE2B
+## 17449 ENSG00000214447     FAM187A
+## 18271 ENSG00000223802       CERS1
+## 18954 ENSG00000185829      ARL17A
+## 19795 ENSG00000228960      OR2A9P
+## 20986 ENSG00000233024      NPIPA9
+## 23511 ENSG00000243716      NPIPB5
+## 23647 ENSG00000244306            
+## 23681 ENSG00000244479   OR2A1-AS1
+## 25475 ENSG00000254852      NPIPA2
+## 27388 ENSG00000261052     SULT1A3
+## 28294 ENSG00000205670      SMIM11
+## 28298 ENSG00000230606   LINC02969
+## 28981 ENSG00000268350     FAM156A
+## 30768 ENSG00000274628    CYP4F59P
+## 32590 ENSG00000281856            
+## 
+#
+##	> length(ensembl_gene_id$ensembl_gene_id)
+##	[1] 33200
+##	> length(conversion_table$ensembl_gene_id)
+##	[1] 32920
+##	> length(unique(conversion_table$ensembl_gene_id))
+##	[1] 32899
+
+
+
+		joined=dplyr::left_join(ensembl_gene_id,conversion_table,by='ensembl_gene_id')
+
+		##	y=unique(joined)$ensembl_gene_id
+		##	y[duplicated(y)]
+		##	[1] "ENSG00000230417" "ENSG00000276085"
+
+		#	Some ensembl_gene_ids have duplicate hgnc_symbols. Concatenate them.
+		#	> getBM(filters = "ensembl_gene_id",attributes = c("ensembl_gene_id","hgnc_symbol"),values=c("ENSG00000230417","ENSG00000276085"), mart = mart)
+		#	ensembl_gene_id hgnc_symbol
+		#	1 ENSG00000230417   LINC00595
+		#	2 ENSG00000230417   LINC00856
+		#	3 ENSG00000276085      CCL3L1
+		#	4 ENSG00000276085      CCL3L3
+
+
+		joined = joined %>% group_by(ensembl_gene_id) %>% mutate(hgnc_symbol = paste(hgnc_symbol, collapse = ","))
+		joined = as.data.frame(joined)
+		joined = unique(joined)
+
+
+
+		#	Some ensembl_gene_ids are not in the biomart. Set hgnc_symbol to ensembl_gene_id.
+		joined$hgnc_symbol <- ifelse( joined$hgnc_symbol == "", joined$ensembl_gene_id, joined$hgnc_symbol )
+
+		joined$hgnc_symbol <- ifelse( joined$hgnc_symbol == "NA", joined$ensembl_gene_id, joined$hgnc_symbol )
+#
+#gene
+#ENSG00000212939
+#which(row.names(normcounts) == gene)
+#11523
+#gene
+#SCGB3A1
+#which(row.names(normcounts) == gene)
+#7381
+#gene
+#AIRE
+#which(row.names(normcounts) == gene)
+#7290
+#gene
+#SULF2
+#which(row.names(normcounts) == gene)
+#10758
+#gene
+#ENSG00000280071
+#which(row.names(normcounts) == gene)
+#14357
+#gene
+#NA.80
+#which(row.names(normcounts) == gene)
+#
+#Error in `$<-.data.frame`(`*tmp*`, "group", value = c(2L, 2L, 2L, 2L,  : 
+#  replacement has 1455 rows, data has 0
+
+		rownames(joined)=joined$ensembl_gene_id
+		joined=joined['hgnc_symbol']
+
+		#	check if you like identical(rownames(RE_disc$counts),rownames(joined))
+
+		rownames(RE_disc$counts)=joined$hgnc_symbol
+}
+```
+
+##	Read metadata
+
+```{r}
+#covars = read.csv(cov_file, sep =",",header = TRUE , colClasses=c("character","character"))
+#	DON'T USE LEADING ZEROES. IF INTEGERS, LEADING ZEROES ARE DROPPED. THEN CAN'T BE REFERENCED WITH THE LEADING ZERO! (Stanford 71)
+covars = read_csv(cov_file, col_names = TRUE , col_types = cols(.default = "c") )
+
+#	message("covars")
+head(covars)
+```
+
+
+```{r}
+#Establish if there are covariates to include 
+#Cov_check = (is.na(covs) == FALSE)
+Cov_check = ((covs == "NA") == FALSE)
+
+if(Cov_check ==FALSE){
+	#	message("covs false")
+	covs = c()
+	cov_types = c()
+}
+
+# Add the group id to the REdiscover file  NO LONGER COMPATIBLE WITH SECONDARY GROUP
+group_list = data.frame(mat.or.vec(nrow(RE_disc$samples),(1+length(covs))))
+not.present= c()
+
+covar_groups = covars[group_col]
+#	message("covar_groups")
+#	message(covar_groups)
+
+covar_groups
+```
+
+```{r}
+
+#second_groups = covars[second_col]
+colnames(group_list)= c(group_col, covs)
+for(i in c(1:nrow(RE_disc$samples))){
+
+	id = as.character(RE_disc$samples$sample[i])
+	#	message("id")
+	#	message(id)
+	#print("group")
+	#print(as.character(RE_disc$samples$group[i]))
+
+	#id = data.set$id[i]
+	#print(data.set$id[i])
+	#print(id)
+	ref_id = which(covars[case_ID_col] == id)
+	#	message("ref_id")
+	#	message(ref_id)
+
+
+	#	Filter out samples that have been rolled up but not included in metadata file.
+
+
+	if(length(ref_id)==1){
+		#	message("length ref_id == 1")
+		group_list[i,1] = as.character(covar_groups[ref_id,1])
+		#group_list[i,2] = as.character(second_groups[ref_id,1])
+		if(Cov_check ==TRUE){
+			print(paste("length(covs) ",length(covs)))
+			for(k in c(1:length(covs))){
+				group_list[i,(1+k)] = as.character(covars[covs[k]][ref_id,])
+			}
+		}
+	}else{
+		#	message("length ref_id != 1")
+		#	message(length(ref_id))
+		#print(id)
+		group_list[i,1]= "NA"
+		#group_list[i,2]= "NA"
+		if(Cov_check ==TRUE){
+			for(k in c(1:length(covs))){
+				group_list[i,(1+k)] = "NA"
+			}
+		}
+		not.present= c(not.present,i)
+	}
+	#	message("group_list[i,1]")
+	#	message(group_list[i,1])
+}
+
+group_list[,1] = as.factor(group_list[,1])
+#group_list[,2] = as.factor(group_list[,2])
+if(Cov_check ==TRUE){
+	for(k in c(1:length(covs))){
+		group_list[,k+1]=as.character(group_list[,k+1])
+	}
+}
+```
+
+
+```{r}
+not.present
+```
+
+```{r}
+group_list
+```
+
+Remove the not present samples 
+
+```{r}
+if(length(not.present) >=1){
+	print(paste("Number of samples not found in covariate file = ", length(not.present), sep = ""))
+	#groups_less = group_list[-not.present,1]	#	????? Typo? Unused? Comment out?
+	#second_less = group_list[-not.present,2]
+	RE_disc= RE_disc[,-not.present]
+	group_less =group_list[-not.present,]
+}else{
+	group_less = group_list
+}
+```
+
+
+```{r}
+group_less
+```
+
+
+```{r}
+# Cov_check is always FALSE, but if the metadata file contains other columns
+#	group_less needs to be group_less
+#	Otherwise group_less[,1] ????
+
+if(Cov_check == TRUE){
+	print("Cov_check == TRUE")
+	RE_disc$samples$group = as.factor(group_less[,1])
+}else if( length(group_less) > 1 ){
+	print("length(group_less) > 1")
+	RE_disc$samples$group = as.factor(group_less)
+}else if( is.na(as.factor(group_less)) ){
+	print("is.na(as.factor(group_less))")
+	RE_disc$samples$group = as.factor(group_less[,1]) 
+}else{
+	print("OTHER")
+
+	print("group_less")
+	print(group_less)
+	print("length(group_less)")
+	print(length(group_less))
+
+	RE_disc$samples$group = as.factor(group_less)
+
+}
+```
+
+
+```{r}
+if(Cov_check ==TRUE){
+	for(k in c(1:length(covs))){
+		RE_disc$samples[covs[k]] = type.convert(group_less[covs[k]], cov_types[k])
+	}
+}
+```
+
+
+```{r}
+# Filter out any groups with no group assignment (== NA)
+Nas = which(is.na(RE_disc$samples$group))
+if(length(Nas >0)){
+	RE_disc=RE_disc[,-Nas]
+}
+```
+
+
+```{r}
+# Filter out groups with too little sample size (i.e <10)
+u_groups = unique(RE_disc$samples$group)
+for(grp in u_groups){
+	n_grp=which(RE_disc$samples$group == grp)
+	n_in_group = length(n_grp)  
+	if(n_in_group <1){
+		RE_disc= RE_disc[,-n_grp]
+	}
+}
+RE_disc$samples$group = droplevels(RE_disc$samples$group)
+```
+
+
+```{r}
+# Filter out samples with NA covariates 
+if(Cov_check ==TRUE){
+	for(cov_n in covs){
+		Nas = which(is.na(RE_disc$samples[cov_n]))
+		if(length(Nas >=1)){
+			RE_disc = RE_disc[,-Nas]
+		}
+	}
+}
+```
+
+
+# Analysis {.tabset .tabset-fade .tabset-pills}
+
+##	Prepare
+
+```{r}
+# ##### Filter out the Healthy individuals  REMOVE REMOVE REMOVE
+# healthy = which(RE_disc$samples$group =="Healthy")
+# RE_disc = RE_disc[,-healthy]
+
+# Make sure the "factor" covariates do not have levels with 0 entries
+if(Cov_check ==TRUE){
+	for(k in c(1:length(covs))){
+		if(cov_types[k]=="factor"){
+			RE_disc$samples[covs[k]] = droplevels(RE_disc$samples[covs[k]])
+		}
+	}
+}
+summary(RE_disc$samples$group)
+
+
+#apply(x$counts, 2, sum)
+dim(RE_disc)
+RE_disc <- calcNormFactors(RE_disc, method = "RLE") # WAS RLE if this fails
+
+keep <- rowSums(cpm(RE_disc)>50) >= 2
+RE_disc <- RE_disc[keep,]
+dim(RE_disc)
+RE_disc$samples$lib.size <- colSums(RE_disc$counts)
+```
+
+
+```{r}
+# Normalize the data
+RE_disc <- calcNormFactors(RE_disc, method = "RLE") # WAS RLE if this fails
+```
+
+
+```{r}
+n_groups = length(unique(RE_disc$samples$group))
+
+# Data Exploration -----------------------------------------------------------
+
+
+# Get the proper group colors 
+u_groups = as.character(unique(RE_disc$samples$group))
+col_groups= brewer.pal(n = length(u_groups), name = "Set1")
+possible_shapes= c(21,22,23,24,25)
+shape_groups = c()
+for(i in c(1:length(u_groups))){
+	shape_groups =c(shape_groups, possible_shapes[i%%length(possible_shapes)+1])
+}
+
+color_p = c()
+shape_p = c()
+for(i in c(1:length(RE_disc$samples$group))){
+	color_p = c(color_p, col_groups[which(u_groups == RE_disc$samples$group[i])])
+	shape_p = c(shape_p, shape_groups[which(u_groups == RE_disc$samples$group[i])])
+}
+```
+
+##	Exploratory Plots {.tabset .tabset-fade .tabset-pills}
+
+
+```{r}
+#Normalization for PCA and t-SNE, not exactly the same 
+normcounts = 1e6*cpm(RE_disc, normalized.lib.sizes=T)
+```
+
+
+### PCA
+
+```{r PCA, echo = FALSE, fig.height=6}
+
+## Perform PCA analysis and make plot
+plotPCA(normcounts, bg=color_p, labels= FALSE , pch=shape_p, col = "black",)
+plot(NULL ,xaxt='n',yaxt='n',bty='n',ylab='',xlab='', xlim=0:1, ylim=0:1)
+legend("top", u_groups,  pch=shape_groups, col= "black", pt.bg=col_groups, y.intersp=1.25)
+
+
+
+plotPCA(normcounts, bg=color_p, labels= FALSE , pch=shape_p, col = "black", k=3)
+
+```
+
+### MDS 
+"Dimension reduction via MDS is achieved by taking the original set of samples and calculating a dissimilarity (distance) measure for each pairwise comparison of samples. The samples are then usually represented graphically in two dimensions such that the distance between points on the plot approximates their multivariate dissimilarity as closely as possible."
+```{r MDS, echo = FALSE}
+a=plotMDS(RE_disc, col = "black", pch = shape_p, bg= color_p)
+plot(NULL ,xaxt='n',yaxt='n',bty='n',ylab='',xlab='', xlim=0:1, ylim=0:1)
+legend("top", u_groups,  pch=shape_groups, col= "black", pt.bg=col_groups, y.intersp=1.25)
+
+```
+
+
+
+# Differential Expression Analysis {.tabset .tabset-fade .tabset-pills}
+
+
+## Set up 
+```{r DE setup, echo = FALSE, warning=FALSE}
+par(mfrow=c(1,1))
+
+# Dispersion analysis 
+d1 <- estimateCommonDisp(RE_disc, verbose=T)
+d1 <- estimateTagwiseDisp(d1)
+plotBCV(d1)
+
+# Design Matrix -----------------------------------------------------------------------
+if(Cov_check ==TRUE){
+	design.mat <- model.matrix(~ 0 +., RE_disc$samples[c("group",covs)]  )
+}else{
+	design.mat <- model.matrix(~ 0 +., RE_disc$samples[c("group")]  )
+}
+#head(design.mat)
+
+#colnames(design.mat) <- levels(RE_disc$samples$group)
+d2 <- estimateGLMCommonDisp(RE_disc,design.mat)
+d2 <- estimateGLMTrendedDisp(d2,design.mat, method="auto")
+# You can change method to "auto", "bin.spline", "power", "spline", "bin.loess".
+# The default is "auto" which chooses "bin.spline" when > 200 tags and "power" otherwise.
+d2 <- estimateGLMTagwiseDisp(d2,design.mat)
+plotBCV(d2)
+
+fit <- glmFit(d2, design.mat)
+
+# make some contrast patterns
+col_groups = levels(RE_disc$samples$group)
+n_contrasts = choose(length(col_groups), 2)
+contrasts = mat.or.vec(n_contrasts, ncol(design.mat))
+combos = t(combn(length(col_groups), 2))
+colnames(contrasts)= colnames(design.mat)
+for(nc in c(1:n_contrasts)){
+	contrasts[nc,combos[nc,1]] =1
+	contrasts[nc,combos[nc,2]] =-1
+}
+
+
+```
+
+## Volcano Plots
+
+```{r volcano plotter, echo = FALSE, warning=FALSE}
+# make the volcano plot function here 
+Volcano_plot = function(glmt, label, alpha_thresh, logfc){
+	glmt = data.frame(glmt$table)
+	glmt$FDR=as.numeric(glmt$FDR)
+	glmt$diffexpressed = "No"
+	# if log2Foldchange > 0.6 and pvalue < 0.05, set as "UP" 
+	glmt$diffexpressed[glmt$logFC > logfc & glmt$FDR < alpha_thresh] <- "Up"
+	# if log2Foldchange < -0.6 and pvalue < 0.05, set as "DOWN"
+	glmt$diffexpressed[glmt$logFC < -logfc & glmt$FDR < alpha_thresh] <- "Down"
+
+	# Create a new column "delabel" to glmt, that will contain the name of genes differentially expressed (NA in case they are not)
+	glmt$delabel <- NA
+	glmt$delabel[glmt$diffexpressed != "No"] <- row.names(glmt[glmt$diffexpressed != "No",]) # CAREFUL HERE repname or rep family!!!!!
+
+
+
+	glmt$PValue=as.numeric(glmt$PValue)
+
+
+	# Re-plot but this time color the points with "diffexpressed"
+	p <- ggplot(data=glmt, aes(x=logFC, y=-log10(PValue), col=diffexpressed, label=delabel)) + geom_point() + theme_minimal()+ geom_text_repel() + theme(title =element_text(size=8, face='bold'))
+
+	# Add lines as before...
+	p2 <- p + geom_vline(xintercept=c(-logfc, logfc), col="red") +
+		geom_hline(yintercept=-log10(alpha_thresh), col="red")    
+	# 1. by default, it is assigned to the categories in an alphabetical order):
+	mycolors <- c("blue", "red", "black")
+	names(mycolors) <- c("Down", "Up", "No")
+	p3 <- p2 + scale_colour_manual(values = mycolors) + ggtitle(label)
+
+	print(p3)
+
+}
+```
+
+```{r volcano plots, echo = FALSE, warning=FALSE, fig.align = "center"}
+# This section actually does all of the DE analysis, but prints out all of the volcano plots 
+sig_trans = c()
+results = list()
+for(nc in c(1:n_contrasts)){
+	lrt <- glmLRT(fit, contrast=contrasts[nc,])
+	glmt = topTags(lrt, n=nrow(RE_disc))
+	#glmt = glmt[glmt$table$FDR <alpha_thresh,]
+	#glmt = glmt[which(abs(glmt$table$logFC)>logFC_thresh),]
+
+	#print(glmt[,-which(colnames(glmt) == "LR")])
+
+
+	# Volcano Plot 
+	#Volcano_plot(glmt, as.character(glmt$comparison), alpha_thresh, logFC_thresh)
+	#Volcano_plot(glmt, as.character(glmt$comparison), alpha_thresh, as.numeric(logFC_thresh))
+	Volcano_plot(glmt, as.character(glmt$comparison),as.numeric(alpha_thresh), as.numeric(logFC_thresh))
+
+	#sig_trans = c(sig_trans, row.names(glmt[which(glmt$table$FDR<alpha_thresh),1][[1]])   )
+	pass_logFC= row.names(glmt$table[which(abs(glmt$table$logFC)>logFC_thresh),])
+	pass_alpha = row.names(glmt$table[which(glmt$table$FDR<alpha_thresh),])
+	pass_both = intersect(pass_logFC, pass_alpha)
+	if(length(pass_both) > 0){
+		sig_trans = c(sig_trans, pass_both)
+	}
+	#sig_trans = c(sig_trans, row.names(glmt[which(abs(glmt$table$logFC)>logFC_thresh),1][[1]])   )
+	glmt_res = glmt$table[which(row.names(glmt$table) %in% sig_trans),-which(colnames(glmt) == "LR")]
+	if(nrow(glmt_res >0)){
+		glmt_res$comparison = glmt$comparison
+	}
+	results[[nc]] = glmt_res
+}
+```
+
+##  Box Plots 
+
+All significant TEs are plotted here, the window is limited to a maximum value of 2 standard deviations above the mean expression. 
+
+```{r box plots, echo = FALSE, warning=FALSE, fig.height = 4, fig.width = 6, fig.align = "center"}
+
+
+# Plotting the top results for each pairwise test 
+to_plot = unique(sig_trans)
+
+for( gene in to_plot){
+	print(gene)
+	plot_data = data.frame(as.numeric(normcounts[which(row.names(normcounts) == gene),]))
+	plot_data$group = RE_disc$samples$group
+	#print(paste("Individual with max value = ", row.names(plot_data)[which(plot_data[,1] == max(plot_data[,1]))], sep=""))
+	colnames(plot_data) = c(gene, "group")
+	plot_data$group = as.factor(plot_data$group)
+	# Plot limits based on mean and 2 sd above
+	plot_max = mean(as.numeric(plot_data[,1])) + 2* sd(as.numeric(plot_data[,1]))
+	excluded = length(which(as.numeric(plot_data[,1]) > plot_max))
+	plot_max = min(max(as.numeric(plot_data[,1])), plot_max)
+	print(paste(as.numeric(excluded), " samples are above the plot window and not pictured.", sep = ""))
+	p <- ggplot(plot_data, aes(x=as.factor(plot_data[,2]), y=as.numeric(plot_data[,1]), fill=as.factor(plot_data[,2]))) +
+	geom_boxplot()+
+	labs(title=paste(gene, sep = ""),x=group_col, y = "Count (normalized)")+
+	theme(legend.position= "right")+
+	theme(plot.title = element_text(hjust = 0.5))+
+	geom_jitter(color="black", size=0.2, alpha=0.1) +
+	theme(axis.text.x = element_blank())+
+	labs(fill = group_col) +
+	theme(legend.key.size = unit(1, 'cm'), #change legend key size
+	legend.key.height = unit(1, 'cm'), #change legend key height
+	legend.key.width = unit(1, 'cm'), #change legend key width
+	legend.title = element_text(size=7), #change legend title font size
+	legend.text = element_text(size=5)) + ylim(0,plot_max)
+  
+	print(p)
+}
+
+```
+
+## Significant Result Tables 
+
+```{r tables, echo = FALSE, results="asis", warning=FALSE}
+for(nc in c(1:n_contrasts)){
+	kbltbl = (results[[nc]])[,-c(ncol(results[[nc]]))] %>%
+	kbl(caption = (results[[nc]])$comparison[1] ) %>%
+	kable_classic(full_width = F, html_font = "Cambria") %>%
+	scroll_box(width = "1000px", height = "300px")
+	print(kbltbl)
+}
+
+```
+
+
+## Heat Maps 
+
+```{r heatmaps, echo = FALSE}
+# HeatMap of significant traits
+# for the repname case
+
+# Get all significant results from each test 
+
+sig.results = to_plot
+
+sig.loc = mat.or.vec(length(sig.results), 1)
+
+if(length(sig.loc) >1){
+
+	for(i in c(1:length(sig.results))){
+		sig.loc[i] = which(row.names(normcounts) == sig.results[i])
+	}
+	normcounts = normcounts[sig.loc,]
+
+	gaps =c()
+	# Need to reorder the data so that it is collected by group
+	ordered= c()
+	for(k in c(1:length(col_groups))){
+		ordered = c(ordered,which(RE_disc$samples$group ==col_groups[k]) )
+		if(k!=length(col_groups)){
+			gaps=c(gaps,length(ordered))
+		}
+	}
+	normcounts = normcounts[,as.integer(ordered)]
+	Groups = RE_disc$samples$group
+	names(Groups) = rownames(RE_disc$samples)
+
+	colorpal= rev(brewer.pal(11,"RdBu"))
+
+	pheat.plot=pheatmap(log(normcounts+0.01,base = 2), cluster_rows = T,scale="row", cluster_cols = F,annotation_col = data.frame(Groups),col=colorpal,show_colnames = FALSE ,gaps_col=gaps, main = paste(group_col, ": log_2 REdiscoverTE ", filetypes[filetype], sep ="") )
+#	print(pheat.plot)
+	pheat.plot.clust = pheatmap(log(normcounts+0.01,base = 2), cluster_rows = T,scale="row", cluster_cols = T,annotation_col = data.frame(Groups),col=colorpal,show_colnames = FALSE ,gaps_col=gaps, main = paste(group_col, ": log_2 REdiscoverTE ", filetypes[filetype], " clustered", sep ="") )
+#	print(pheat.plot.clust)
+
+
+#  message("See corresponding PDF for a better version of this heatmap.")
+#  save_pheatmap_pdf <- function(z, filename, width=30, height=20) {
+#    stopifnot(!missing(z))
+#    stopifnot(!missing(filename))
+#    pdf(filename, width=width, height=height)
+#    grid::grid.newpage()
+#    grid::grid.draw(z$gtable)
+#    dev.off()
+#  }
+#  save_pheatmap_pdf(pheat.plot,  paste(out_dir,"/",date,".",group_col,".",user_filename,filetypes[filetype],".alpha_",alpha_thresh,".logFC_",logFC_thresh,".NoQuestion.heatmap.pdf", sep=""))
+#  save_pheatmap_pdf(pheat.plot.clust,  paste(out_dir,"/",date,".",group_col,".",user_filename,filetypes[filetype],".alpha_",alpha_thresh,".logFC_",logFC_thresh,".NoQuestion.clustered.heatmap.pdf", sep=""))
+
+}else{
+	print("Not enough significant results at these thresholds to plot a heatmap.")
+}
+```
+
+
+
